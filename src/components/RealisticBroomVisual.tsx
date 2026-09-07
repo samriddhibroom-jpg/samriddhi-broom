@@ -42,7 +42,7 @@ export const RealisticBroomVisual: React.FC<RealisticBroomVisualProps> = ({
         <div className="relative w-full h-full flex items-center justify-center">
           <img
             src={EXACT_IMAGE_CANDIDATES[candidateIndex]}
-            alt="SAMRIDHII Broom - Authentic Hill Grass Broom by Adhrit Industries"
+            alt="SAMRIDDHI Broom - Authentic Hill Grass Broom by Adhrit Industries"
             referrerPolicy="no-referrer"
             onError={handleImageError}
             className="w-full h-full object-contain filter drop-shadow-[0_16px_32px_rgba(26,26,26,0.14)] rounded-xl"

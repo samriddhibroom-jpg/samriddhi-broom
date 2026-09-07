@@ -62,7 +62,7 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
             <div className="relative w-44 sm:w-52 h-72 sm:h-96 flex items-center justify-center">
               <img
                 src={flagshipBroomImg}
-                alt="SAMRIDHII Broom - Authentic Hill Grass Broom"
+                alt="SAMRIDDHI Broom - Authentic Hill Grass Broom"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-contain object-center drop-shadow-md hover:scale-103 transition-transform duration-300"
               />
@@ -71,7 +71,7 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
               <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#C5A059]">
                 Flagship Model
               </span>
-              <p className="font-serif text-xl text-[#1A1A1A]">SAMRIDHII Premium Broom</p>
+              <p className="font-serif text-xl text-[#1A1A1A]">SAMRIDDHI Premium Broom</p>
             </div>
           </div>
 

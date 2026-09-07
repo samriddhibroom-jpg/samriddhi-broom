@@ -8,7 +8,6 @@ import {
   Ruler,
   Weight,
   Sparkles,
-  Camera,
   Upload,
   RotateCcw,
   Loader2,
@@ -205,21 +204,15 @@ const ModelCardImage: React.FC<{ model: BroomModel }> = ({ model }) => {
 export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
   onSelectModelForEnquiry,
 }) => {
-  const [pricingMode, setPricingMode] = useState<'retail' | 'wholesale'>('retail');
-
   const handleOrderWhatsApp = (model: BroomModel) => {
-    const priceText =
-      pricingMode === 'retail'
-        ? `₹${model.retailPrice} (Retail)`
-        : `₹${model.wholesalePricePerPiece}/piece (Wholesale Carton of ${model.minWholesaleQty})`;
     const text = encodeURIComponent(
-      `Hello Adhrit Industries, I want to order: ${model.name} (${model.modelCode}) at ${priceText}. Please share stock and dispatch details.`
+      `Hello Adhrit Industries, I am interested in ordering ${model.name} (${model.modelCode}) for bulk supply (500+ units). Please share wholesale catalog, product details, and dispatch schedule.`
     );
     window.open(`https://wa.me/91${BRAND_DATA.phone}?text=${text}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleEnquiryClick = (model: BroomModel) => {
-    const enquiryName = `${model.name} (${pricingMode === 'retail' ? `₹${model.retailPrice} Retail` : `₹${model.wholesalePricePerPiece} Wholesale`})`;
+    const enquiryName = `${model.name} (${model.modelCode}) - Bulk Order (500+ Units)`;
     if (onSelectModelForEnquiry) {
       onSelectModelForEnquiry(enquiryName);
     } else {
@@ -241,63 +234,30 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
       {/* Subtle ambient glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(197,160,89,0.06)_0%,transparent_65%)] pointer-events-none" />
 
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Compact Header */}
+      <div className="max-w-5xl mx-auto space-y-10">
+        {/* Section Header */}
         <div className="text-center space-y-3 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2.5">
             <span className="h-[1px] w-6 bg-[#C5A059]" />
             <span className="text-[10px] sm:text-[11px] tracking-[0.28em] uppercase font-bold text-[#C5A059] font-sans">
-              MODELS & PRICING
+              MODELS & SPECIFICATIONS
             </span>
             <span className="h-[1px] w-6 bg-[#C5A059]" />
           </div>
 
           <h2 className="font-serif text-2xl sm:text-4xl text-[#1A1A1A] font-light tracking-tight leading-tight">
-            Two Broom Grades. Direct Factory Pricing.
+            Two Broom Grades. Direct Factory Supply.
           </h2>
 
-          {/* Simple Retail vs Wholesale Toggle */}
-          <div className="pt-2 flex justify-center">
-            <div className="inline-flex p-1 rounded-full bg-[#1A1A1A]/5 border border-[#1A1A1A10]">
-              <button
-                type="button"
-                onClick={() => setPricingMode('retail')}
-                className={`px-5 py-1.5 rounded-full text-xs font-semibold tracking-wider transition-all uppercase cursor-pointer ${
-                  pricingMode === 'retail'
-                    ? 'bg-[#1A1A1A] text-white shadow-xs'
-                    : 'text-[#1A1A1A]/70 hover:text-[#1A1A1A]'
-                }`}
-              >
-                Retail Price
-              </button>
-              <button
-                type="button"
-                onClick={() => setPricingMode('wholesale')}
-                className={`px-5 py-1.5 rounded-full text-xs font-semibold tracking-wider transition-all uppercase cursor-pointer flex items-center gap-1.5 ${
-                  pricingMode === 'wholesale'
-                    ? 'bg-[#1A1A1A] text-white shadow-xs'
-                    : 'text-[#1A1A1A]/70 hover:text-[#1A1A1A]'
-                }`}
-              >
-                <span>Wholesale (50+ Pcs)</span>
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#C5A059] text-white font-bold">
-                  SAVE 25%+
-                </span>
-              </button>
-            </div>
-          </div>
+          <p className="text-xs sm:text-sm text-[#1A1A1A]/75 font-sans leading-relaxed">
+            Manufactured in Ranchi with selected Meghalaya and Assam hill grass. Available for direct factory bulk supply (500+ units packed in 50-piece master cartons) for retailers, wholesalers, and distributors.
+          </p>
         </div>
 
         {/* Side-by-Side Cards: Compact 2-Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 items-stretch">
           {BROOM_MODELS.map((model, idx) => {
             const isPopular = model.isPopular;
-            const unitPrice =
-              pricingMode === 'retail' ? model.retailPrice : model.wholesalePricePerPiece;
-            const discountPercent =
-              pricingMode === 'retail'
-                ? Math.round(((model.mrp - model.retailPrice) / model.mrp) * 100)
-                : Math.round(((model.mrp - model.wholesalePricePerPiece) / model.mrp) * 100);
 
             return (
               <motion.div
@@ -339,41 +299,24 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
                   {/* Real Product Stock Photo with Exact Photo Upload Support */}
                   {model.image && <ModelCardImage model={model} />}
 
-                  {/* Pricing Bar */}
-                  <div className="mt-3.5 p-3.5 rounded-lg bg-[#FDFBF7] border border-[#C5A05925] flex items-baseline justify-between gap-3">
+                  {/* Commercial Supply & Packaging Info (Prices Removed) */}
+                  <div className="mt-3.5 p-3.5 rounded-lg bg-[#FDFBF7] border border-[#C5A05925] flex items-center justify-between gap-3">
                     <div>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-serif text-3xl font-light text-[#1A1A1A]">
-                          ₹{unitPrice}
-                        </span>
-                        <span className="text-xs text-[#1A1A1A]/60 font-sans">
-                          {pricingMode === 'retail' ? '/ piece' : '/ pc (bulk)'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
-                        <span className="text-[#1A1A1A]/45 line-through">₹{model.mrp} MRP</span>
-                        <span className="text-[#4A5D4E] font-semibold">{discountPercent}% OFF</span>
-                      </div>
+                      <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#C5A059] block font-sans">
+                        Packaging & Supply
+                      </span>
+                      <span className="font-serif text-lg text-[#1A1A1A] font-normal block leading-tight mt-0.5">
+                        Bulk Supply: 500+ Units
+                      </span>
+                      <span className="text-[11px] text-[#1A1A1A]/65 font-sans block mt-0.5">
+                        Factory sealed • 50-pc master cartons • Direct dispatch
+                      </span>
                     </div>
 
-                    <div className="text-right text-[11px] text-[#1A1A1A]/70">
-                      {pricingMode === 'retail' ? (
-                        <div>
-                          <span className="block text-[9px] uppercase tracking-wider text-[#C5A059] font-bold">
-                            Pack of 3
-                          </span>
-                          <span className="font-medium text-[#1A1A1A]">₹{model.packOfThreePrice}</span>
-                        </div>
-                      ) : (
-                        <div>
-                          <span className="block text-[9px] uppercase tracking-wider text-[#C5A059] font-bold">
-                            Carton (50 Pcs)
-                          </span>
-                          <span className="font-medium text-[#1A1A1A]">
-                            ₹{model.wholesalePricePerPiece * model.minWholesaleQty}
-                          </span>
-                        </div>
-                      )}
+                    <div className="text-right shrink-0">
+                      <span className="inline-block text-[9px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-[#1A1A1A] text-white font-sans">
+                        Ready Stock
+                      </span>
                     </div>
                   </div>
 
@@ -389,7 +332,7 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
                     </div>
                   </div>
 
-                  {/* Core Features list (Concise 3 items) */}
+                  {/* Core Features list */}
                   <ul className="mt-3.5 space-y-1.5 text-xs text-[#1A1A1A]/75 font-sans">
                     <li className="flex items-start gap-2">
                       <Check className="w-3.5 h-3.5 text-[#C5A059] shrink-0 mt-0.5" />
@@ -406,7 +349,7 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
                   </ul>
                 </div>
 
-                {/* Single Compact Order Button + Subtle Link */}
+                {/* Direct Action */}
                 <div className="mt-5 pt-3.5 border-t border-[#1A1A1A08] space-y-2">
                   <button
                     type="button"
@@ -415,7 +358,7 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
                     className="w-full py-2.5 px-4 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold tracking-wider uppercase transition-all shadow-xs flex items-center justify-center gap-2 group cursor-pointer"
                   >
                     <MessageCircle className="w-3.5 h-3.5 fill-white text-transparent" />
-                    <span>Order on WhatsApp • ₹{unitPrice}</span>
+                    <span>Inquire on WhatsApp</span>
                     <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                   </button>
 
@@ -423,9 +366,9 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
                     type="button"
                     onClick={() => handleEnquiryClick(model)}
                     id={`inquire-direct-${model.id}-btn`}
-                    className="w-full text-center text-[11px] text-[#1A1A1A]/60 hover:text-[#C5A059] font-medium transition-colors cursor-pointer py-0.5"
+                    className="w-full text-center text-[11px] text-[#1A1A1A]/65 hover:text-[#C5A059] font-medium transition-colors cursor-pointer py-0.5"
                   >
-                    Send Direct Inquiry / Request Bulk Quote →
+                    Send Direct Inquiry / Request Wholesale Quote →
                   </button>
                 </div>
               </motion.div>
@@ -434,46 +377,47 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
         </div>
 
         {/* Wholesale Inventory & Warehouse Stock Display */}
-        <div className="p-4 sm:p-5 rounded-xl bg-white border border-[#C5A05930] shadow-xs flex flex-col md:flex-row items-center gap-5">
-          <div className="w-full md:w-48 h-28 shrink-0 rounded-lg overflow-hidden border border-[#1A1A1A10] relative group">
-            <img
-              src={WAREHOUSE_STOCK_IMAGE}
-              alt="Adhrit Industries Samriddhi Broom Warehouse Stock"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-[9px] text-white font-mono">
-              Ready Warehouse Stock
-            </span>
-          </div>
-
-          <div className="flex-1 space-y-1 text-left">
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#C5A059] font-bold text-[10px] uppercase tracking-wider font-sans">
+        <div className="p-6 sm:p-7 rounded-2xl bg-white border border-[#1A1A1A10] shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-24 h-20 shrink-0 rounded-lg overflow-hidden border border-[#1A1A1A12] relative group">
+              <img
+                src={WAREHOUSE_STOCK_IMAGE}
+                alt="Adhrit Industries Samriddhi Broom Warehouse Stock in Ranchi"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <span className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-black/75 text-[8px] text-white font-mono">
+                Godown Stock
+              </span>
+            </div>
+            <div className="space-y-1 text-left">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-[#C5A059] block font-sans">
                 Wholesale & Factory Dispatch
               </span>
-              <span className="text-[11px] text-[#4A5D4E] font-medium">In Stock at Ranchi Facility</span>
+              <h4 className="font-serif text-lg sm:text-xl text-[#1A1A1A] font-light">
+                Ready Stock for Retailers, Wholesalers & Distributors
+              </h4>
+              <p className="text-xs text-[#1A1A1A]/70 font-sans">
+                Bulk supply of 500+ units packed in standard 50-piece master cartons. Daily transport available across Jharkhand, Bihar, Bengal, Odisha & pan-India.
+              </p>
             </div>
-            <p className="text-xs text-[#1A1A1A]/75 font-sans leading-relaxed">
-              Available in 50-piece master cartons with branded outer packaging, GST invoicing, and immediate delivery across Jharkhand, Bihar, and Eastern India for retail shops and distributors.
-            </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <a
               href={`tel:${BRAND_DATA.phone}`}
-              className="flex-1 md:flex-none py-2.5 px-4 rounded-full border border-[#1A1A1A20] hover:border-[#C5A059] hover:bg-[#C5A059]/5 text-[#1A1A1A] text-xs font-semibold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5"
+              className="flex-1 sm:flex-none py-2.5 px-4 rounded-full border border-[#1A1A1A20] hover:border-[#C5A059] hover:bg-[#C5A059]/5 text-[#1A1A1A] text-xs font-semibold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5"
             >
               <Phone className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span>{BRAND_DATA.displayPhone}</span>
+              <span>Call {BRAND_DATA.displayPhone}</span>
             </a>
             <a
               href={`https://wa.me/91${BRAND_DATA.phone}?text=${encodeURIComponent(
-                'Hello Adhrit Industries, I am interested in wholesale carton stock of Samriddhi Broom. Please share distributor terms.'
+                'Hello Adhrit Industries, I am interested in bulk wholesale order (500+ units) of Samriddhi Broom. Please share distributor terms.'
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 md:flex-none py-2.5 px-4 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5 shadow-xs"
+              className="flex-1 sm:flex-none py-2.5 px-4 rounded-full bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold uppercase tracking-wider transition-colors inline-flex items-center justify-center gap-1.5 shadow-xs"
             >
               <MessageCircle className="w-3.5 h-3.5 fill-white text-transparent" />
               <span>Wholesale WhatsApp</span>
@@ -484,4 +428,3 @@ export const BroomModelsPricing: React.FC<BroomModelsPricingProps> = ({
     </section>
   );
 };
-

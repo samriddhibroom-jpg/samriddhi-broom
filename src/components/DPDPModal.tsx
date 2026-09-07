@@ -16,6 +16,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { DPDP_COMPLIANCE_DATA } from '../data/dpdpData';
+import { submitDPDPRequestToSupabase } from '../lib/supabase';
 
 interface DPDPModalProps {
   isOpen: boolean;
@@ -81,6 +82,16 @@ export const DPDPModal: React.FC<DPDPModalProps> = ({
     const generatedTicket = `DPDP-ADH-${new Date().getFullYear()}-${randomSuffix}`;
     setTicketId(generatedTicket);
     setRequestSubmitted(true);
+
+    // Asynchronously log to Supabase
+    submitDPDPRequestToSupabase({
+      right_type: requestType,
+      name: requesterName,
+      contact: requesterContact,
+      details: `${requestDetails} [Ticket: ${generatedTicket}]`,
+    }).catch(() => {
+      // Non-blocking
+    });
   };
 
   return (

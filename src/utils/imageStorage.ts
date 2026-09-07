@@ -1,4 +1,4 @@
-// Durable image persistence utility for SAMRIDHII Broom models
+// Durable image persistence utility for SAMRIDDHI Broom models
 
 const DB_NAME = 'samriddhi_broom_db';
 const DB_VERSION = 1;

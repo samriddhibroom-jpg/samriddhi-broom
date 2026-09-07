@@ -43,10 +43,6 @@ export interface BroomModel {
   subTitle: string;
   tagline: string;
   badge: string;
-  retailPrice: number;
-  mrp: number;
-  packOfThreePrice: number;
-  wholesalePricePerPiece: number;
   minWholesaleQty: number;
   length: string;
   weight: string;

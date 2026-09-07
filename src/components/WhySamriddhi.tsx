@@ -37,7 +37,7 @@ export const WhySamriddhi: React.FC = () => {
           </div>
 
           <h2 className="font-serif text-3xl sm:text-5xl text-[#1A1A1A] font-light tracking-tight">
-            WHY SAMRIDHII?
+            WHY SAMRIDDHI?
           </h2>
 
           <p className="text-sm sm:text-base text-[#1A1A1A]/75 font-sans leading-relaxed">

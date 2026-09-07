@@ -11,7 +11,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
   useEffect(() => {
     // Stage 0: ADHRIT INDUSTRIES
     const t1 = setTimeout(() => {
-      setStage(1); // SAMRIDHII BROOM
+      setStage(1); // SAMRIDDHI BROOM
     }, 450);
 
     const t2 = setTimeout(() => {
@@ -59,7 +59,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ onComplete }) => {
               transition={{ duration: 0.45, ease: 'easeOut' }}
               className="font-serif text-3xl sm:text-4xl text-[#1A1A1A] tracking-wide mb-5 font-light"
             >
-              SAMRIDHII BROOM<span className="text-[#C5A059] text-xl align-top ml-0.5">™</span>
+              SAMRIDDHI BROOM<span className="text-[#C5A059] text-xl align-top ml-0.5">™</span>
             </motion.div>
 
             {/* Sweep line animation */}

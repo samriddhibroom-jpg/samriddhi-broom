@@ -20,6 +20,7 @@ import { ScrollProgress } from './components/ScrollProgress';
 import { CustomCursor } from './components/CustomCursor';
 import { DPDPModal } from './components/DPDPModal';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
+import { AdminPanelModal } from './components/AdminPanelModal';
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,9 @@ export default function App() {
   const [dpdpModalOpen, setDpdpModalOpen] = useState(false);
   const [dpdpInitialTab, setDpdpInitialTab] = useState<'notice' | 'rights' | 'request' | 'grievance'>('notice');
   const [forceShowCookieBanner, setForceShowCookieBanner] = useState(false);
+
+  // Admin Portal Modal State
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
 
   const handleOpenDPDPModal = (tab: 'notice' | 'rights' | 'request' | 'grievance' = 'notice') => {
     setDpdpInitialTab(tab);
@@ -143,6 +147,13 @@ export default function App() {
         onNavigate={handleNavigate}
         onOpenDPDPModal={handleOpenDPDPModal}
         onOpenCookieSettings={() => setForceShowCookieBanner(true)}
+        onOpenAdminPanel={() => setAdminModalOpen(true)}
+      />
+
+      {/* Admin Operations & Bookings Manager (Only accessible via footer) */}
+      <AdminPanelModal
+        isOpen={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
       />
 
       {/* DPDP Act 2023 Statutory Privacy & Rights Center Modal */}

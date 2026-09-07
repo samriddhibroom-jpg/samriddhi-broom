@@ -27,7 +27,7 @@ export const DPDP_COMPLIANCE_DATA = {
   actReference: 'Act No. 22 of 2023 (Republic of India)',
   dataFiduciary: {
     name: 'ADHRIT INDUSTRIES',
-    brandName: 'SAMRIDHII BROOM™',
+    brandName: 'SAMRIDDHI BROOM™',
     status: 'Data Fiduciary under Section 2(i) of DPDP Act, 2023',
     cityState: 'Ranchi, Jharkhand, India',
     registeredAddress: 'Aprajita Apartment, Lower Burdwan Compound, Dhobi Ghat, Lalpur, Ranchi, Jharkhand — 834001',

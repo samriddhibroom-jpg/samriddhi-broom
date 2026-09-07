@@ -24,7 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, onOpenDPDPModal }) =
     { label: 'About', shortLabel: 'About', href: '#about' },
     { label: 'Samriddhi Broom', shortLabel: 'Brooms', href: '#samriddhi' },
     { label: 'Why Us', shortLabel: 'Why Us', href: '#why-us' },
-    { label: 'Models & Pricing', shortLabel: 'Pricing', href: '#pricing' },
+    { label: 'Broom Models', shortLabel: 'Models', href: '#pricing' },
     { label: 'Contact', shortLabel: 'Contact', href: '#contact' },
   ];
 
@@ -63,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, onOpenDPDPModal }) =
               Adhrit Industries
             </span>
             <span className="text-[9px] md:text-[9.5px] lg:text-[10px] uppercase tracking-[0.14em] md:tracking-[0.16em] lg:tracking-[0.2em] -mt-0.5 opacity-60 text-[#1A1A1A] whitespace-nowrap">
-              A Unit of Trust • Samridhii Broom™
+              A Unit of Trust • Samriddhi Broom™
             </span>
           </a>
 
@@ -132,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, onOpenDPDPModal }) =
                 <p className="font-serif text-lg font-bold text-[#1A1A1A] uppercase tracking-tight">
                   Adhrit Industries
                 </p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]">SAMRIDHII BROOM™</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]">SAMRIDDHI BROOM™</p>
               </div>
               <button
                 type="button"

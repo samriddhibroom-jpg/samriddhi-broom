@@ -96,7 +96,7 @@ export const SweepTransition: React.FC<SweepTransitionProps> = ({
 
         <p className="text-sm sm:text-base text-[#161616]/75 max-w-2xl font-sans leading-relaxed mb-10">
           Cleanliness is not merely a task; it is the quiet foundation upon which every fresh day is built.
-          With each deliberate motion, SAMRIDHII BROOM™ restores harmony and clarity to your living sanctuary.
+          With each deliberate motion, SAMRIDDHI BROOM™ restores harmony and clarity to your living sanctuary.
         </p>
 
         {/* Sweeping Broom Visual Container */}

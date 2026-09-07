@@ -7,12 +7,14 @@ interface FooterProps {
   onNavigate?: (id: string) => void;
   onOpenDPDPModal?: (tab?: 'notice' | 'rights' | 'request' | 'grievance') => void;
   onOpenCookieSettings?: () => void;
+  onOpenAdminPanel?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onNavigate,
   onOpenDPDPModal,
   onOpenCookieSettings,
+  onOpenAdminPanel,
 }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -22,7 +24,7 @@ export const Footer: React.FC<FooterProps> = ({
     { label: 'Home', href: '#home' },
     { label: 'About', href: '#about' },
     { label: 'Samriddhi Broom', href: '#samriddhi' },
-    { label: 'Models & Pricing', href: '#pricing' },
+    { label: 'Broom Models', href: '#pricing' },
     { label: 'Contact', href: '#contact' },
   ];
 
@@ -201,9 +203,24 @@ export const Footer: React.FC<FooterProps> = ({
           </button>
         </div>
 
-        {/* Bottom Tier: Copyright & Brand Sign-off */}
+        {/* Bottom Tier: Copyright, Admin Access & Brand Sign-off */}
         <div className="pt-8 border-t border-[#FDFBF715] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#FDFBF750]">
-          <p>© 2026 {BRAND_DATA.companyName}. All Rights Reserved.</p>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+            <p>© 2026 {BRAND_DATA.companyName}. All Rights Reserved.</p>
+            <span className="hidden sm:inline text-white/20">•</span>
+            {onOpenAdminPanel && (
+              <button
+                type="button"
+                onClick={onOpenAdminPanel}
+                id="footer-admin-portal-link"
+                className="inline-flex items-center gap-1.5 text-[#FDFBF780] hover:text-[#C5A059] transition-colors cursor-pointer text-xs font-semibold py-1 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-[#C5A05940]"
+              >
+                <Lock className="w-3 h-3 text-[#C5A059]" />
+                <span>Admin Portal & Bookings</span>
+              </button>
+            )}
+          </div>
+
           <p className="font-serif italic text-xs text-[#C5A059]">
             {BRAND_DATA.openingCeremony.regards}
           </p>

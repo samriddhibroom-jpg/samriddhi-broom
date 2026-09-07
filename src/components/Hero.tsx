@@ -202,37 +202,41 @@ export const Hero: React.FC<HeroProps> = ({
               Manufactured at Ranchi using selected Meghalaya & Assam hill grass. Pre-combed for dust-free sweeping.
             </p>
 
-            {/* Quick Models Teaser */}
-            <div className="space-y-2 pb-4 border-b border-[#1A1A1A10] text-xs font-sans">
-              <div className="p-2.5 rounded-lg bg-[#FDFBF7] border border-[#C5A05925] flex items-center justify-between">
+            {/* 2 Flagship Models Quick Spec */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#F5F2EB]/80 border border-[#1A1A1A08] text-xs">
                 <div>
-                  <span className="font-medium text-[#1A1A1A] block text-xs">Samriddhi Premium</span>
+                  <span className="font-semibold block text-[#1A1A1A]">Samriddhi Premium</span>
                   <span className="text-[10px] text-[#1A1A1A]/55">Fluorescent Ribbed Grip</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-serif text-base font-medium text-[#1A1A1A]">₹250</span>
-                  <span className="block text-[9px] text-[#4A5D4E] font-bold">Wholesale ₹190</span>
+                  <span className="inline-block text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#4A5D4E]/10 text-[#4A5D4E]">
+                    Standard Grade
+                  </span>
+                  <span className="block text-[9px] text-[#1A1A1A]/60 mt-0.5">45 inches (114 cm) • 400g</span>
                 </div>
               </div>
 
-              <div className="p-2.5 rounded-lg bg-[#FDFBF7] border border-[#C5A05925] flex items-center justify-between">
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#F5F2EB]/80 border border-[#1A1A1A08] text-xs">
                 <div>
-                  <span className="font-medium text-[#1A1A1A] block text-xs">Samriddhi Gold Pro</span>
+                  <span className="font-semibold block text-[#1A1A1A]">Samriddhi Gold</span>
                   <span className="text-[10px] text-[#1A1A1A]/55">Zero-Bend Long Reach</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-serif text-base font-medium text-[#C5A059]">₹270</span>
-                  <span className="block text-[9px] text-[#4A5D4E] font-bold">Wholesale ₹210</span>
+                  <span className="inline-block text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#C5A059]">
+                    Flagship Grade
+                  </span>
+                  <span className="block text-[9px] text-[#1A1A1A]/60 mt-0.5">50 inches (127 cm) • 500g</span>
                 </div>
               </div>
             </div>
 
-            {/* Link to Models & Pricing Section */}
+            {/* Link to Models Section */}
             <a
               href="#pricing"
               className="mt-4 w-full bg-[#1A1A1A] hover:bg-[#C5A059] text-white py-2.5 px-4 text-[11px] uppercase tracking-widest font-bold transition-colors text-center flex items-center justify-center gap-1.5 cursor-pointer rounded-full"
             >
-              <span>View Models & Pricing</span>
+              <span>View Broom Models</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </a>
           </div>

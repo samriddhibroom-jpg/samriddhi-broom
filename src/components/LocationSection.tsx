@@ -159,7 +159,7 @@ export const LocationSection: React.FC = () => {
                   <p className="font-serif text-xs sm:text-sm font-medium text-white">
                     {BRAND_DATA.openingCeremony.venueName}
                   </p>
-                  <p className="text-[10px] text-[#C5A059] font-bold">SAMRIDHII BROOM™ Launch</p>
+                  <p className="text-[10px] text-[#C5A059] font-bold">SAMRIDDHI BROOM™ Launch</p>
                 </div>
               </div>
               <div className="w-3 h-3 bg-[#1A1A1A] rotate-45 -mt-1.5 border-r border-b border-[#C5A059]" />
