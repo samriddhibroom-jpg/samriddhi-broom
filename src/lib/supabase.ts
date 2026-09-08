@@ -37,16 +37,16 @@ export interface SubmitResult {
 }
 
 /**
- * Backup locally so no customer inquiry is ever lost
+ * Ephemeral session fallback for offline/network retry without exposing PII in persistent localStorage
  */
-function backupInquiryLocally(record: InquiryRecord) {
+function backupInquiryForSession(record: InquiryRecord) {
   try {
-    const existing = JSON.parse(localStorage.getItem('adhrit_inquiries_backup') || '[]');
+    const existing = JSON.parse(sessionStorage.getItem('adhrit_session_inquiries') || '[]');
     existing.unshift({
       ...record,
       saved_at: new Date().toISOString(),
     });
-    localStorage.setItem('adhrit_inquiries_backup', JSON.stringify(existing.slice(0, 50)));
+    sessionStorage.setItem('adhrit_session_inquiries', JSON.stringify(existing.slice(0, 10)));
   } catch {
     // Non-blocking fallback
   }
@@ -70,9 +70,6 @@ export async function submitInquiryToSupabase(
     created_at: new Date().toISOString(),
   };
 
-  // Always save locally first as safety net
-  backupInquiryLocally(payload);
-
   try {
     // Try primary table 'inquiries'
     const { error: primaryError } = await supabase.from('inquiries').insert([payload]);
@@ -87,19 +84,22 @@ export async function submitInquiryToSupabase(
       if (!altError) {
         return { success: true, message: 'Inquiry saved successfully to Supabase backend.' };
       }
+      backupInquiryForSession(payload);
       return {
         success: false,
-        error: `Supabase table 'inquiries' not found yet. Please create the 'inquiries' table in your Supabase SQL Editor. (Your lead was safely saved locally).`,
+        error: `Supabase table 'inquiries' not found yet. Please create the 'inquiries' table in your Supabase SQL Editor.`,
         savedLocally: true,
       };
     }
 
+    backupInquiryForSession(payload);
     return {
       success: false,
       error: primaryError.message || 'Failed to submit inquiry to Supabase.',
       savedLocally: true,
     };
   } catch (err: unknown) {
+    backupInquiryForSession(payload);
     const message = err instanceof Error ? err.message : 'Network error';
     return {
       success: false,

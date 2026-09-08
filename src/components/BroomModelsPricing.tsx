@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
 import {
   Check,
@@ -8,195 +8,59 @@ import {
   Ruler,
   Weight,
   Sparkles,
-  Upload,
-  RotateCcw,
-  Loader2,
 } from 'lucide-react';
 import { BRAND_DATA, BROOM_MODELS, WAREHOUSE_STOCK_IMAGE } from '../data/brandData';
 import { BroomModel } from '../types';
-import { persistBroomImage, loadBroomImage, resetBroomImage } from '../utils/imageStorage';
 
 interface BroomModelsPricingProps {
   onSelectModelForEnquiry?: (modelName: string) => void;
 }
 
 const ModelCardImage: React.FC<{ model: BroomModel }> = ({ model }) => {
-  const [customSrc, setCustomSrc] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const candidateUrls = React.useMemo(() => {
+    if (model.id === 'samriddhi-premium') {
+      return [
+        '/assets/samriddhi_premium.png',
+        '/assets/samriddhi_premium.png.png',
+        '/assets/samriddhi_premium.jpg',
+        '/assets/samriddhi_premium.jpeg',
+        '/samriddhi_premium.png',
+        '/samriddhi_premium.png.png',
+        '/samriddhi_premium.jpg',
+        model.image,
+      ];
+    }
+    return [
+      '/assets/samriddhi_gold.png',
+      '/assets/samriddhi_gold.png.png',
+      '/assets/samriddhi_gold.jpg',
+      '/assets/samriddhi_gold.jpeg',
+      '/samriddhi_gold.png',
+      '/samriddhi_gold.png.png',
+      '/samriddhi_gold.jpg',
+      model.image,
+    ];
+  }, [model.id, model.image]);
 
-  // Load from durable storage (localStorage, IndexedDB, or server disk)
-  useEffect(() => {
-    let isMounted = true;
-    loadBroomImage(model.id).then((src) => {
-      if (isMounted && src) {
-        setCustomSrc(src);
-      }
-    });
+  const [currentIndex, setCurrentIndex] = React.useState(0);
 
-    const handleUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent<{ modelId: string; dataUrl: string | null }>;
-      if (customEvent.detail && customEvent.detail.modelId === model.id) {
-        setCustomSrc(customEvent.detail.dataUrl);
-        setCandidateIdx(0);
-      }
-    };
-
-    window.addEventListener('samriddhi_broom_image_updated', handleUpdate);
-    return () => {
-      isMounted = false;
-      window.removeEventListener('samriddhi_broom_image_updated', handleUpdate);
-    };
-  }, [model.id]);
-
-  const candidates = useMemo(() => {
-    const list: string[] = [];
-    if (customSrc) list.push(customSrc);
-    if (model.image) list.push(model.image);
-    return list;
-  }, [customSrc, model.image]);
-
-  const [candidateIdx, setCandidateIdx] = useState(0);
-
-  const saveAndSetImage = async (file: File) => {
-    setIsSaving(true);
-    try {
-      const savedDataUrl = await persistBroomImage(model.id, file);
-      setCustomSrc(savedDataUrl);
-      setCandidateIdx(0);
-    } catch (err) {
-      console.error('Failed to persist photo', err);
-    } finally {
-      setIsSaving(false);
+  const handleError = () => {
+    if (currentIndex < candidateUrls.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
     }
   };
-
-  const handleReset = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await resetBroomImage(model.id);
-    } catch (err) {
-      console.warn('Could not remove custom image', err);
-    }
-    setCustomSrc(null);
-    setCandidateIdx(0);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      saveAndSetImage(file);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      saveAndSetImage(file);
-    }
-  };
-
-  const currentImgSrc = candidates[candidateIdx] || model.image;
 
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={() => fileInputRef.current?.click()}
-      title="Click or drag and drop to upload an image"
-      className={`relative mt-3 rounded-lg overflow-hidden border transition-all duration-200 bg-[#F5F2EB]/60 aspect-[16/8] group cursor-pointer ${
-        isDragging ? 'border-[#C5A059] ring-2 ring-[#C5A059]/30 bg-[#C5A059]/10' : 'border-[#1A1A1A10] hover:border-[#C5A059]/50'
-      }`}
-    >
+    <div className="relative mt-3 rounded-lg overflow-hidden border border-[#1A1A1A15] hover:border-[#C5A059]/60 transition-all duration-300 bg-gradient-to-b from-[#F5F2EB]/90 to-[#EFEBE1]/80 aspect-[16/8] group shadow-xs">
       <img
         id={`pricing-model-photo-${model.id}`}
-        src={currentImgSrc}
+        src={candidateUrls[currentIndex]}
         alt={model.name}
+        onError={handleError}
         referrerPolicy="no-referrer"
-        loading="eager"
-        onError={() => {
-          if (candidateIdx < candidates.length - 1) {
-            setCandidateIdx((prev) => prev + 1);
-          }
-        }}
-        className="w-full h-full object-contain object-center group-hover:scale-102 transition-transform duration-300"
+        loading="lazy"
+        className="w-full h-full object-contain object-center group-hover:scale-103 transition-transform duration-300 drop-shadow-xs"
       />
-
-      {/* Saving / Processing Spinner */}
-      {isSaving && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center text-white z-20">
-          <Loader2 className="w-6 h-6 animate-spin text-[#C5A059] mb-1" />
-          <span className="text-[11px] font-medium tracking-wide">Saving & optimizing photo...</span>
-        </div>
-      )}
-
-      {/* Drag & drop overlay */}
-      {isDragging && (
-        <div className="absolute inset-0 bg-[#C5A059]/20 backdrop-blur-xs flex flex-col items-center justify-center border-2 border-dashed border-[#C5A059] rounded-lg z-20 pointer-events-none">
-          <Upload className="w-8 h-8 text-[#C5A059] animate-bounce mb-1" />
-          <span className="text-xs font-semibold text-[#1A1A1A] bg-white/95 px-2.5 py-1 rounded shadow-xs">
-            Drop image file here
-          </span>
-        </div>
-      )}
-
-      {/* Status Badge */}
-      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-[10px] text-white font-medium flex items-center gap-1.5 shadow-xs pointer-events-none">
-        <span className={`w-1.5 h-1.5 rounded-full ${customSrc ? 'bg-[#25D366]' : 'bg-[#C5A059]'}`} />
-        <span>{customSrc ? 'Custom Uploaded Photo' : 'Factory Stock'}</span>
-      </div>
-
-      {/* Prominent Upload & Replace Controls */}
-      <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
-        {customSrc && (
-          <button
-            type="button"
-            onClick={handleReset}
-            title="Reset to default factory photo"
-            className="px-2 py-1 bg-white/95 hover:bg-white text-rose-700 hover:text-rose-800 text-[10px] font-medium tracking-tight rounded border border-rose-200 shadow-xs backdrop-blur-xs flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span className="hidden sm:inline">Reset</span>
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            fileInputRef.current?.click();
-          }}
-          title="Browse file to upload"
-          className="px-2.5 py-1 bg-[#1A1A1A]/95 hover:bg-[#1A1A1A] text-[#FDFBF7] text-[10px] font-semibold tracking-tight rounded border border-[#C5A059]/40 shadow-xs backdrop-blur-xs flex items-center gap-1.5 cursor-pointer transition-all hover:scale-105"
-        >
-          <Upload className="w-3 h-3 text-[#C5A059]" />
-          <span>Upload Image</span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-      </div>
-
-      {/* Hover prompt hint */}
-      <div className="absolute inset-x-0 bottom-0 py-1 bg-gradient-to-t from-black/50 to-transparent text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <span className="text-[9px] text-white/90 font-medium">Click or drag & drop image to replace</span>
-      </div>
     </div>
   );
 };

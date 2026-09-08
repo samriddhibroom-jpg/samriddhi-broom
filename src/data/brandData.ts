@@ -1,6 +1,6 @@
 import { BrandInfo, ProductCategory, WhyFeature, BroomModel } from '../types';
-import samriddhiGoldImg from '../assets/images/samriddhi_gold_broom_1788448431961.jpg';
-import samriddhiPremiumImg from '../assets/images/samriddhi_premium_broom_1788448447865.jpg';
+import samriddhiGoldImg from '../assets/images/samriddhi_gold_exact_product_1788880995301.jpg';
+import samriddhiPremiumImg from '../assets/images/samriddhi_premium_catalog_1788880788145.jpg';
 import samriddhiWarehouseStockImg from '../assets/images/samriddhi_warehouse_stock_1788448464875.jpg';
 
 export const WAREHOUSE_STOCK_IMAGE = samriddhiWarehouseStockImg;

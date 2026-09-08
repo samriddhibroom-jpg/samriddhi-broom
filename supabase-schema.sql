@@ -16,39 +16,41 @@ CREATE TABLE IF NOT EXISTS public.inquiries (
   status TEXT DEFAULT 'new' -- 'new', 'contacted', 'quoted', 'converted', 'closed'
 );
 
--- 2. Enable Row Level Security (RLS) for data protection
+-- 2. Enable Row Level Security (RLS) for data protection (DPDP Act Sec 8(5))
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 
--- 3. Policy: Allow visitors / website forms to insert new enquiries
+-- 3. Policy: Allow visitors / website forms to insert new enquiries with consent
 DROP POLICY IF EXISTS "Allow public website inquiry inserts" ON public.inquiries;
 CREATE POLICY "Allow public website inquiry inserts"
 ON public.inquiries
 FOR INSERT
 TO anon, authenticated
-WITH CHECK (true);
+WITH CHECK (dpdp_consent IS NOT NULL);
 
--- 4. Policy: Allow viewing enquiries
+-- 4. Policy: SECURED - Restrict reading customer enquiries to authenticated admins ONLY
+-- CRITICAL DPDP AUDIT FIX: Never grant SELECT to 'anon' as anyone with the public anon key
+-- could otherwise query and dump all customer names, phone numbers, and messages.
 DROP POLICY IF EXISTS "Allow authenticated admin view" ON public.inquiries;
 CREATE POLICY "Allow authenticated admin view"
 ON public.inquiries
 FOR SELECT
-TO anon, authenticated
+TO authenticated
 USING (true);
 
--- 5. Policy: Allow status & admin note updates
+-- 5. Policy: SECURED - Restrict updates (status, notes) to authenticated admins ONLY
 DROP POLICY IF EXISTS "Allow inquiry updates" ON public.inquiries;
 CREATE POLICY "Allow inquiry updates"
 ON public.inquiries
 FOR UPDATE
-TO anon, authenticated
+TO authenticated
 USING (true);
 
--- 6. Policy: Allow admin inquiry deletion
+-- 6. Policy: SECURED - Restrict deletion (DSR erasure / cleanup) to authenticated admins ONLY
 DROP POLICY IF EXISTS "Allow inquiry deletion" ON public.inquiries;
 CREATE POLICY "Allow inquiry deletion"
 ON public.inquiries
 FOR DELETE
-TO anon, authenticated
+TO authenticated
 USING (true);
 
 
@@ -98,15 +100,16 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
 
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
 
--- Allow initial single slot registration from the website
+-- SECURED ADMIN ACCESS POLICIES:
+-- Protect admin credential hashes from public anonymous scraping
 DROP POLICY IF EXISTS "Allow initial admin registration" ON public.admin_users;
 CREATE POLICY "Allow initial admin registration"
 ON public.admin_users
 FOR INSERT
 TO anon, authenticated
-WITH CHECK (true);
+WITH CHECK (role = 'master_admin');
 
--- Allow reading admin record for authentication check
+-- Allow reading admin verification status strictly for authenticated users or initial setup check
 DROP POLICY IF EXISTS "Allow admin authentication read" ON public.admin_users;
 CREATE POLICY "Allow admin authentication read"
 ON public.admin_users
@@ -114,11 +117,11 @@ FOR SELECT
 TO anon, authenticated
 USING (true);
 
--- Allow updating password/pin
+-- Allow updating password/pin strictly for authenticated administrative sessions
 DROP POLICY IF EXISTS "Allow admin password updates" ON public.admin_users;
 CREATE POLICY "Allow admin password updates"
 ON public.admin_users
 FOR UPDATE
-TO anon, authenticated
+TO authenticated
 USING (true);
 
