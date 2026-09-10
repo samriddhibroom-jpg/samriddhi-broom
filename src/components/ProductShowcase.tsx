@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, ArrowRight, CheckCircle2, Info, Eye } from 'lucide-react';
+import {
+  Sparkles,
+  ArrowRight,
+  Info,
+  Eye,
+} from 'lucide-react';
 import { BRAND_DATA, PRODUCT_CATEGORIES } from '../data/brandData';
 import { ProductCategory } from '../types';
-import { RealisticBroomVisual } from './RealisticBroomVisual';
-import { BotanicalCorner, GoldDivider } from './OrnamentalAssets';
-import macroBristlesImg from '../assets/images/broom_bristles_macro_1788444956401.jpg';
-import flagshipBroomImg from '../assets/images/samriddhi_flagship_broom.jpg';
+import { GoldDivider } from './OrnamentalAssets';
 
 interface ProductShowcaseProps {
   onSelectCategoryForEnquiry: (categoryName: string) => void;
@@ -53,77 +55,6 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
           </div>
 
           <GoldDivider className="pt-2" />
-        </div>
-
-        {/* Large Flagship Broom Feature Display */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-white p-6 sm:p-10 rounded-2xl border border-[#C5A05930] shadow-sm">
-          {/* Broom Showcase Column */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center relative">
-            <div className="relative w-44 sm:w-52 h-72 sm:h-96 flex items-center justify-center">
-              <img
-                src={flagshipBroomImg}
-                alt="SAMRIDDHI Broom - Authentic Hill Grass Broom"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain object-center drop-shadow-md hover:scale-103 transition-transform duration-300"
-              />
-            </div>
-            <div className="text-center mt-3">
-              <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#C5A059]">
-                Flagship Model
-              </span>
-              <p className="font-serif text-xl text-[#1A1A1A]">SAMRIDDHI Premium Broom</p>
-            </div>
-          </div>
-
-          {/* Core Craft Narrative */}
-          <div className="lg:col-span-7 space-y-6 lg:border-l lg:border-[#1A1A1A10] lg:pl-10">
-            <div className="space-y-3">
-              <span className="text-[10px] uppercase tracking-widest text-[#C5A059] font-bold">
-                The Cleaning Companion
-              </span>
-              <h3 className="font-serif text-2xl sm:text-3xl text-[#1A1A1A] font-light leading-snug">
-                Engineered for genuine everyday balance and effortless room sweeps.
-              </h3>
-              <p className="text-sm sm:text-base text-[#1A1A1A]/75 leading-relaxed font-sans">
-                A clean room fosters an organized mind. Samriddhi Broom™ pairs traditional cleaning
-                sensibilities with modern ergonomic handling to deliver smooth sweep arcs with
-                minimal hand strain.
-              </p>
-            </div>
-
-            {/* Macro Craft Preview */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl bg-[#FDFBF7] border border-[#C5A05930]">
-              <img
-                src={macroBristlesImg}
-                alt="Samriddhi Broom bristle craftsmanship"
-                referrerPolicy="no-referrer"
-                className="w-20 h-20 rounded-lg object-cover border border-[#C5A059]/30"
-              />
-              <div className="space-y-1 text-center sm:text-left">
-                <h4 className="font-serif text-sm font-semibold text-[#1A1A1A]">
-                  Crafted Binding & Balanced Bristle Flare
-                </h4>
-                <p className="text-xs text-[#1A1A1A]/70 font-sans">
-                  Structured to gather loose dust smoothly across marble, tile, or cement floors without scatter.
-                </p>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <button
-                type="button"
-                onClick={() => onSelectCategoryForEnquiry('Samriddhi Flagship Broom')}
-                id="enquire-flagship-broom-btn"
-                className="px-6 py-3 bg-[#1A1A1A] hover:bg-[#4A5D4E] text-white text-[11px] uppercase tracking-widest font-bold transition-all shadow-xs cursor-pointer"
-              >
-                Enquire for Orders
-              </button>
-              <span className="text-xs text-[#1A1A1A]/60">
-                Direct hotline: <strong className="text-[#1A1A1A]">{BRAND_DATA.displayPhone}</strong>
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Category Filter Pills */}

@@ -36,6 +36,15 @@ export interface BrandInfo {
   };
 }
 
+export interface BroomImageItem {
+  id: string;
+  url: string;
+  fallbackUrls?: string[];
+  label: string;
+  caption: string;
+  tag?: string;
+}
+
 export interface BroomModel {
   id: string;
   name: string;
@@ -56,4 +65,5 @@ export interface BroomModel {
   }[];
   isPopular?: boolean;
   image?: string;
+  gallery?: BroomImageItem[];
 }

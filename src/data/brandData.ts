@@ -1,9 +1,11 @@
 import { BrandInfo, ProductCategory, WhyFeature, BroomModel } from '../types';
-import samriddhiGoldImg from '../assets/images/samriddhi_gold_exact_product_1788880995301.jpg';
-import samriddhiPremiumImg from '../assets/images/samriddhi_premium_catalog_1788880788145.jpg';
+import samriddhiGoldImg from '../assets/images/samriddhi_gold_original.png';
+import samriddhiPremiumImg from '../assets/images/samriddhi_premium_original.png';
+import samriddhiPremiumUnwrappedImg from '../assets/images/samriddhi_premium_unwrapped_original.jpeg';
 import samriddhiWarehouseStockImg from '../assets/images/samriddhi_warehouse_stock_1788448464875.jpg';
 
 export const WAREHOUSE_STOCK_IMAGE = samriddhiWarehouseStockImg;
+export const SAMRIDDHI_PREMIUM_UNWRAPPED_IMAGE = samriddhiPremiumUnwrappedImg;
 
 export const BRAND_DATA: BrandInfo = {
   companyName: 'ADHRIT INDUSTRIES',
@@ -105,6 +107,28 @@ export const BROOM_MODELS: BroomModel[] = [
     bestFor: 'Daily indoor sweeping, marble, vitrified tiles & bedrooms',
     isPopular: false,
     image: samriddhiPremiumImg,
+    gallery: [
+      {
+        id: 'packaged',
+        url: samriddhiPremiumImg,
+        fallbackUrls: ['/assets/samriddhi_premium.png.png', '/assets/samriddhi_premium.png'],
+        label: 'Packaged (With Wrapper)',
+        caption: 'Royal blue dust-free protective sleeve with brand seal',
+        tag: 'Dust-Free Packed',
+      },
+      {
+        id: 'unwrapped',
+        url: samriddhiPremiumUnwrappedImg,
+        fallbackUrls: [
+          '/assets/WhatsApp%20Image%202026-09-10%20at%2010.19.41%20AM.jpeg',
+          '/assets/samriddhi_premium_unwrapped.jpg',
+          '/assets/samriddhi_premium_unwrapped.jpeg',
+        ],
+        label: 'Unwrapped (Without Wrapper)',
+        caption: 'Pure Meghalaya hill grass bristles & fluorescent grip',
+        tag: 'Natural Bristles',
+      },
+    ],
     features: [
       'Pre-combed natural grass — minimal dust ("bhusa") shedding from first sweep',
       'Ergonomic fluorescent ribbed grip reducing hand & wrist fatigue',
@@ -137,6 +161,30 @@ export const BROOM_MODELS: BroomModel[] = [
     bestFor: 'Large living rooms, verandas, courtyards, commercial offices & deep dust',
     isPopular: true,
     image: samriddhiGoldImg,
+    gallery: [
+      {
+        id: 'packaged',
+        url: samriddhiGoldImg,
+        fallbackUrls: ['/assets/samriddhi_gold.png.png', '/assets/samriddhi_gold.png'],
+        label: 'Packaged (With Wrapper)',
+        caption: 'Luxury black & gold dust-free protective packaging jacket',
+        tag: 'Dust-Free Packed',
+      },
+      {
+        id: 'unwrapped',
+        url: '/assets/samridhi gold.jpeg',
+        fallbackUrls: [
+          '/assets/samridhi%20gold.jpeg',
+          '/assets/samridhi_gold.jpeg',
+          '/assets/samriddhi_gold_unwrapped.jpeg',
+          '/assets/samriddhi_gold_unwrapped.jpg',
+          '/assets/samriddhi_blue_handle_broom_1788630392135.jpg',
+        ],
+        label: 'Unwrapped (Without Wrapper)',
+        caption: 'Royal blue ribbed handle with brand collar & long Meghalaya grass bristles',
+        tag: 'Natural Bristles',
+      },
+    ],
     features: [
       'Extended 50 inches (127 cm) height allows upright sweeping without lower-back bending',
       'Glossy luxury black & gold dust-free protective packaging jacket',

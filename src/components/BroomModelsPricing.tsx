@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Check,
@@ -8,59 +8,252 @@ import {
   Ruler,
   Weight,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
 } from 'lucide-react';
-import { BRAND_DATA, BROOM_MODELS, WAREHOUSE_STOCK_IMAGE } from '../data/brandData';
-import { BroomModel } from '../types';
+import { BRAND_DATA, BROOM_MODELS, WAREHOUSE_STOCK_IMAGE, SAMRIDDHI_PREMIUM_UNWRAPPED_IMAGE } from '../data/brandData';
+import { BroomModel, BroomImageItem } from '../types';
 
 interface BroomModelsPricingProps {
   onSelectModelForEnquiry?: (modelName: string) => void;
 }
 
-const ModelCardImage: React.FC<{ model: BroomModel }> = ({ model }) => {
-  const candidateUrls = React.useMemo(() => {
-    if (model.id === 'samriddhi-premium') {
-      return [
-        '/assets/samriddhi_premium.png',
-        '/assets/samriddhi_premium.png.png',
-        '/assets/samriddhi_premium.jpg',
-        '/assets/samriddhi_premium.jpeg',
-        '/samriddhi_premium.png',
-        '/samriddhi_premium.png.png',
-        '/samriddhi_premium.jpg',
-        model.image,
-      ];
-    }
-    return [
-      '/assets/samriddhi_gold.png',
-      '/assets/samriddhi_gold.png.png',
-      '/assets/samriddhi_gold.jpg',
-      '/assets/samriddhi_gold.jpeg',
-      '/samriddhi_gold.png',
-      '/samriddhi_gold.png.png',
-      '/samriddhi_gold.jpg',
-      model.image,
-    ];
-  }, [model.id, model.image]);
-
-  const [currentIndex, setCurrentIndex] = React.useState(0);
+const FallbackSlideImage: React.FC<{
+  id?: string;
+  urls: string[];
+  alt: string;
+}> = ({ id, urls, alt }) => {
+  const [index, setIndex] = useState(0);
 
   const handleError = () => {
-    if (currentIndex < candidateUrls.length - 1) {
-      setCurrentIndex((prev) => prev + 1);
+    if (index < urls.length - 1) {
+      setIndex((prev) => prev + 1);
     }
   };
 
   return (
-    <div className="relative mt-3 rounded-lg overflow-hidden border border-[#1A1A1A15] hover:border-[#C5A059]/60 transition-all duration-300 bg-gradient-to-b from-[#F5F2EB]/90 to-[#EFEBE1]/80 aspect-[16/8] group shadow-xs">
-      <img
-        id={`pricing-model-photo-${model.id}`}
-        src={candidateUrls[currentIndex]}
-        alt={model.name}
-        onError={handleError}
-        referrerPolicy="no-referrer"
-        loading="lazy"
-        className="w-full h-full object-contain object-center group-hover:scale-103 transition-transform duration-300 drop-shadow-xs"
-      />
+    <img
+      id={id}
+      src={urls[index]}
+      alt={alt}
+      onError={handleError}
+      referrerPolicy="no-referrer"
+      loading="lazy"
+      className="w-full h-full object-contain object-center group-hover:scale-103 transition-transform duration-300 drop-shadow-xs pointer-events-none select-none"
+    />
+  );
+};
+
+const ModelCardImage: React.FC<{ model: BroomModel }> = ({ model }) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  const slides: {
+    id: string;
+    label: string;
+    caption: string;
+    tag?: string;
+    candidateUrls: string[];
+  }[] = React.useMemo(() => {
+    if (model.gallery && model.gallery.length > 0) {
+      return model.gallery.map((g) => ({
+        id: g.id,
+        label: g.label,
+        caption: g.caption,
+        tag: g.tag,
+        candidateUrls: [g.url, ...(g.fallbackUrls || []), model.image || ''],
+      }));
+    }
+
+    if (model.id === 'samriddhi-premium') {
+      return [
+        {
+          id: 'packaged',
+          label: 'With Wrapper',
+          caption: 'Signature royal blue dust-free protective sleeve',
+          tag: 'Retail Packed',
+          candidateUrls: [
+            '/assets/samriddhi_premium.png.png',
+            '/assets/samriddhi_premium.png',
+            '/assets/samriddhi_premium.jpg',
+            model.image || '',
+          ],
+        },
+        {
+          id: 'unwrapped',
+          label: 'Unwrapped Grass',
+          caption: 'Raw Meghalaya hill grass & fluorescent handle (excluding wrapper)',
+          tag: 'Natural Bristles',
+          candidateUrls: [
+            SAMRIDDHI_PREMIUM_UNWRAPPED_IMAGE,
+            '/assets/WhatsApp%20Image%202026-09-10%20at%2010.19.41%20AM.jpeg',
+            '/assets/samriddhi_premium_unwrapped.jpg',
+            '/assets/samriddhi_premium_unwrapped.png',
+            '/assets/samriddhi_premium_unwrapped.jpeg',
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        id: 'packaged',
+        label: 'With Wrapper',
+        caption: 'Luxury black & gold protective sleeve',
+        tag: 'Retail Packed',
+        candidateUrls: [
+          '/assets/samriddhi_gold.png.png',
+          '/assets/samriddhi_gold.png',
+          '/assets/samriddhi_gold.jpg',
+          model.image || '',
+        ],
+      },
+      {
+        id: 'unwrapped',
+        label: 'Unwrapped Grass',
+        caption: 'Royal blue ribbed handle & thick natural grass bristles (excluding wrapper)',
+        tag: 'Natural Bristles',
+        candidateUrls: [
+          '/assets/samridhi gold.jpeg',
+          '/assets/samridhi%20gold.jpeg',
+          '/assets/samridhi_gold.jpeg',
+          '/assets/samriddhi_gold_unwrapped.jpeg',
+          '/assets/samriddhi_gold_unwrapped.jpg',
+          '/assets/samriddhi_blue_handle_broom_1788630392135.jpg',
+        ],
+      },
+    ];
+  }, [model]);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, clientWidth } = scrollRef.current;
+    if (clientWidth > 0) {
+      const nextIndex = Math.round(scrollLeft / clientWidth);
+      if (nextIndex !== activeSlide && nextIndex >= 0 && nextIndex < slides.length) {
+        setActiveSlide(nextIndex);
+      }
+    }
+  };
+
+  const scrollToSlide = (index: number) => {
+    if (!scrollRef.current) return;
+    const target = Math.max(0, Math.min(slides.length - 1, index));
+    scrollRef.current.scrollTo({
+      left: target * scrollRef.current.clientWidth,
+      behavior: 'smooth',
+    });
+    setActiveSlide(target);
+  };
+
+  const hasMultiple = slides.length > 1;
+
+  return (
+    <div className="relative mt-3 rounded-lg overflow-hidden border border-[#1A1A1A15] hover:border-[#C5A059]/60 transition-all duration-300 bg-gradient-to-b from-[#F5F2EB]/90 to-[#EFEBE1]/80 group shadow-xs">
+      {/* Sliding Scroll Container */}
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth w-full aspect-[16/8] no-scrollbar scrollbar-none cursor-grab active:cursor-grabbing"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {slides.map((slide, idx) => (
+          <div
+            key={slide.id}
+            className="w-full shrink-0 h-full snap-center relative flex items-center justify-center px-4"
+          >
+            <FallbackSlideImage
+              id={idx === 0 ? `pricing-model-photo-${model.id}` : `pricing-model-photo-${model.id}-${slide.id}`}
+              urls={slide.candidateUrls}
+              alt={`${model.name} - ${slide.label}`}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Top Bar: View Tag & Slide Counter */}
+      <div className="absolute top-2.5 inset-x-2.5 flex items-center justify-between pointer-events-none z-20">
+        <span className="px-2.5 py-0.5 rounded-full bg-black/75 backdrop-blur-xs text-[10px] font-semibold text-[#FDFBF7] tracking-wider uppercase flex items-center gap-1.5 shadow-xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#C5A059] animate-pulse" />
+          {slides[activeSlide]?.tag || 'Catalog View'}
+        </span>
+
+        {hasMultiple && (
+          <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-xs text-[10px] font-medium text-white/90 shadow-xs">
+            {activeSlide + 1} / {slides.length}
+          </span>
+        )}
+      </div>
+
+      {/* Navigation Arrows for Multiple Photos */}
+      {hasMultiple && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              scrollToSlide(activeSlide - 1);
+            }}
+            disabled={activeSlide === 0}
+            title="Previous photo"
+            aria-label="Previous photo"
+            className={`absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-[#1A1A1A] text-white flex items-center justify-center transition-all duration-200 z-20 backdrop-blur-xs cursor-pointer shadow-md ${
+              activeSlide === 0 ? 'opacity-0 pointer-events-none' : 'opacity-85 hover:opacity-100 hover:scale-110'
+            }`}
+          >
+            <ChevronLeft className="w-4 h-4 text-[#FDFBF7]" />
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              scrollToSlide(activeSlide + 1);
+            }}
+            disabled={activeSlide === slides.length - 1}
+            title="Next photo (unwrapped view)"
+            aria-label="Next photo"
+            className={`absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-[#1A1A1A] text-white flex items-center justify-center transition-all duration-200 z-20 backdrop-blur-xs cursor-pointer shadow-md ${
+              activeSlide === slides.length - 1 ? 'opacity-0 pointer-events-none' : 'opacity-85 hover:opacity-100 hover:scale-110'
+            }`}
+          >
+            <ChevronRight className="w-4 h-4 text-[#FDFBF7]" />
+          </button>
+        </>
+      )}
+
+      {/* Bottom Bar: Slide Switcher Pills & Dot Indicators */}
+      {hasMultiple && (
+        <div className="absolute bottom-2 inset-x-2 flex flex-col sm:flex-row items-center justify-between gap-1 z-20 pointer-events-none">
+          {/* Quick Toggle Pills */}
+          <div className="flex items-center gap-1 bg-black/75 backdrop-blur-md p-0.5 rounded-full pointer-events-auto shadow-xs">
+            {slides.map((slide, idx) => (
+              <button
+                key={slide.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  scrollToSlide(idx);
+                }}
+                className={`px-2 py-0.5 text-[9px] font-semibold rounded-full transition-all duration-200 cursor-pointer ${
+                  activeSlide === idx
+                    ? 'bg-[#C5A059] text-[#1A1A1A] shadow-xs'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {slide.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Swipe / Scroll Hint */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-[9px] text-[#FDFBF7]/80 pointer-events-none">
+            <Layers className="w-2.5 h-2.5 text-[#C5A059]" />
+            <span>Slide or tap to switch</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
