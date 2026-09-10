@@ -143,9 +143,13 @@ export const Hero: React.FC<HeroProps> = ({
               transformOrigin: '50% 50%',
             }}
             transition={{ type: 'spring', damping: 25, stiffness: 80 }}
-            className="relative w-[170px] sm:w-[210px] lg:w-[230px] h-[345px] will-change-transform z-20"
+            className="relative w-[190px] sm:w-[230px] lg:w-[260px] h-[360px] sm:h-[420px] will-change-transform z-20 flex items-center justify-center"
           >
-            <RealisticBroomVisual glow={true} className="w-full h-full" />
+            <RealisticBroomVisual
+              glow={true}
+              customSrc="/assets/ChatGPT%20Image%20Sep%2010,%202026,%2010_31_13%20PM.png"
+              className="w-full h-full"
+            />
           </motion.div>
 
           {/* Product Label in Editorial Styling with distinct separation */}

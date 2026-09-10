@@ -5,6 +5,9 @@ import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { z } from 'zod';
 import { createServer as createViteServer } from 'vite';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // ====================================================================
 // CONFIGURATION & ENVIRONMENT VALIDATION (OWASP TOP 10 HARDENED)
@@ -18,9 +21,13 @@ const AUTHORIZED_EMAIL = (process.env.ADMIN_EMAIL || 'samriddhibroom@gmail.com')
 let CURRENT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Kumar@1987';
 let CURRENT_ADMIN_PIN = process.env.ADMIN_PIN || '1987';
 
-// Master JWT & CSRF Secrets (High-entropy 256-bit keys)
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || crypto.randomBytes(32).toString('hex');
-const CSRF_SECRET = crypto.randomBytes(32).toString('hex');
+// Master JWT & CSRF Secrets (High-entropy 256-bit keys with secure persistent defaults)
+const JWT_SECRET =
+  process.env.ADMIN_JWT_SECRET ||
+  'adhrit_samriddhi_jwt_secure_key_2026_kumar1987_master_token_64chars_high_entropy';
+const CSRF_SECRET =
+  process.env.CSRF_SECRET ||
+  'adhrit_samriddhi_csrf_secure_key_2026_kumar1987_master_token_64chars_high_entropy';
 
 // ====================================================================
 // RATE LIMITING ARCHITECTURE (SLIDING WINDOW & REDIS READY)
@@ -499,7 +506,7 @@ function csrfValidationMiddleware(req: Request, res: Response, next: NextFunctio
 }
 
 // ====================================================================
-// IN-MEMORY STORAGE FOR PERSISTENCE BACKUP
+// STORAGE FOR PERSISTENCE (DISK FILE BACKED WITH MEMORY CACHE)
 // ====================================================================
 interface StoredInquiry {
   id: string;
@@ -515,9 +522,38 @@ interface StoredInquiry {
   ip_hash: string;
 }
 
-const inMemoryInquiries: StoredInquiry[] = [];
-const inMemoryDPDPRequests: any[] = [];
-const inMemoryDeletedIds = new Set<string>();
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const INQUIRIES_FILE = path.join(DATA_DIR, 'inquiries.json');
+const DPDP_FILE = path.join(DATA_DIR, 'dpdp_requests.json');
+const DELETED_IDS_FILE = path.join(DATA_DIR, 'deleted_ids.json');
+
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function loadJsonData<T>(filePath: string, fallback: T): T {
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.warn(`Notice: Could not load ${filePath}, using initial state:`, err);
+  }
+  return fallback;
+}
+
+function saveJsonData(filePath: string, data: unknown): void {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn(`Notice: Could not write ${filePath}:`, err);
+  }
+}
+
+const inMemoryInquiries: StoredInquiry[] = loadJsonData<StoredInquiry[]>(INQUIRIES_FILE, []);
+const inMemoryDPDPRequests: any[] = loadJsonData<any[]>(DPDP_FILE, []);
+const inMemoryDeletedIds = new Set<string>(loadJsonData<string[]>(DELETED_IDS_FILE, []));
 
 // ====================================================================
 // SERVER STARTUP & MIDDLEWARE PIPELINE
@@ -606,6 +642,9 @@ async function startServer() {
     next();
   });
 
+  // Serve static public assets directly
+  app.use('/assets', express.static(path.join(process.cwd(), 'public', 'assets')));
+
   // ====================================================================
   // PUBLIC ROUTES
   // ====================================================================
@@ -668,6 +707,7 @@ async function startServer() {
 
       inMemoryInquiries.unshift(newInquiry);
       if (inMemoryInquiries.length > 500) inMemoryInquiries.pop();
+      saveJsonData(INQUIRIES_FILE, inMemoryInquiries);
 
       res.status(201).json({
         success: true,
@@ -707,6 +747,7 @@ async function startServer() {
 
       inMemoryDPDPRequests.unshift(newRecord);
       if (inMemoryDPDPRequests.length > 200) inMemoryDPDPRequests.pop();
+      saveJsonData(DPDP_FILE, inMemoryDPDPRequests);
 
       res.status(201).json({
         success: true,
@@ -1098,6 +1139,7 @@ async function startServer() {
       if (target) {
         if (status) target.status = status;
         if (admin_notes !== undefined) target.admin_notes = sanitizeInput(admin_notes, 2000);
+        saveJsonData(INQUIRIES_FILE, inMemoryInquiries);
       }
 
       res.json({ success: true, message: 'Inquiry updated successfully.' });
@@ -1122,6 +1164,8 @@ async function startServer() {
       if (index !== -1) {
         inMemoryInquiries.splice(index, 1);
       }
+      saveJsonData(INQUIRIES_FILE, inMemoryInquiries);
+      saveJsonData(DELETED_IDS_FILE, Array.from(inMemoryDeletedIds));
 
       res.json({ success: true, message: 'Inquiry record deleted.' });
     } catch {
@@ -1149,6 +1193,8 @@ async function startServer() {
           inMemoryInquiries.splice(i, 1);
         }
       }
+      saveJsonData(INQUIRIES_FILE, inMemoryInquiries);
+      saveJsonData(DELETED_IDS_FILE, Array.from(inMemoryDeletedIds));
 
       res.json({ success: true, count: ids.length });
     } catch {

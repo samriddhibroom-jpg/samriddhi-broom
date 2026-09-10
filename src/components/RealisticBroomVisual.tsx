@@ -2,28 +2,37 @@ import React, { useState } from 'react';
 import exactBroomImg from '../assets/images/samriddhi_exact_broom.jpg';
 
 const EXACT_IMAGE_CANDIDATES = [
-  '/Screenshot 2026-09-05 210308.png',
-  '/Screenshot 2026-09-03 220118.png',
+  '/assets/samriddhi_uploaded_broom.png',
+  '/assets/ChatGPT%20Image%20Sep%2010,%202026,%2010_31_13%20PM.png',
   '/samriddhi_broom.png',
-  '/samriddhi_broom.jpg',
-  '/broom.png',
-  '/broom.jpg',
+  '/assets/samriddhi_exact_broom.png',
+  '/assets/samriddhi_exact_broom.jpg',
   exactBroomImg,
 ];
 
 interface RealisticBroomVisualProps {
   className?: string;
   glow?: boolean;
+  customSrc?: string;
+  alt?: string;
 }
 
 export const RealisticBroomVisual: React.FC<RealisticBroomVisualProps> = ({
   className = '',
   glow = false,
+  customSrc,
+  alt = 'SAMRIDDHI Broom - Authentic Hill Grass Broom by Adhrit Industries',
 }) => {
   const [candidateIndex, setCandidateIndex] = useState(0);
   const [hasExhaustedCandidates, setHasExhaustedCandidates] = useState(false);
 
+  const activeSrc = customSrc || EXACT_IMAGE_CANDIDATES[candidateIndex];
+
   const handleImageError = () => {
+    if (customSrc) {
+      setHasExhaustedCandidates(false);
+      return;
+    }
     if (candidateIndex < EXACT_IMAGE_CANDIDATES.length - 1) {
       setCandidateIndex((prev) => prev + 1);
     } else {
@@ -32,20 +41,20 @@ export const RealisticBroomVisual: React.FC<RealisticBroomVisualProps> = ({
   };
 
   return (
-    <div className={`relative flex items-center justify-center select-none pointer-events-none ${className}`}>
+    <div className={`relative flex items-center justify-center select-none ${className}`}>
       {/* Ambient subtle glow */}
       {glow && (
-        <div className="absolute inset-0 -m-8 bg-gradient-to-b from-[#C5A059]/15 via-[#C5A059]/5 to-transparent rounded-full blur-2xl opacity-70" />
+        <div className="absolute inset-0 -m-6 bg-gradient-to-b from-[#C5A059]/20 via-[#C5A059]/10 to-transparent rounded-full blur-2xl opacity-80 pointer-events-none" />
       )}
 
       {!hasExhaustedCandidates ? (
         <div className="relative w-full h-full flex items-center justify-center">
           <img
-            src={EXACT_IMAGE_CANDIDATES[candidateIndex]}
-            alt="SAMRIDDHI Broom - Authentic Hill Grass Broom by Adhrit Industries"
+            src={activeSrc}
+            alt={alt}
             referrerPolicy="no-referrer"
             onError={handleImageError}
-            className="w-full h-full object-contain filter drop-shadow-[0_16px_32px_rgba(26,26,26,0.14)] rounded-xl"
+            className="w-full h-full object-contain filter drop-shadow-[0_20px_40px_rgba(26,26,26,0.18)] rounded-2xl transition-transform duration-300"
           />
         </div>
       ) : (
