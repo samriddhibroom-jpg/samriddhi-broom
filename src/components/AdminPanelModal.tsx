@@ -37,6 +37,7 @@ import {
   checkAdminSlotStatus,
   loginAdmin,
   loginWithPin,
+  getActiveAdminSession,
   updateAdminCredentials,
   resetAdminPasswordWithPIN,
   logoutAdminSession,
@@ -134,8 +135,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   // The user MUST provide the Master Password or Master Security PIN to view any bookings.
   useEffect(() => {
     if (!isOpen) {
-      // Clear session so portal is strictly locked on every exit
-      setSession(null);
       return;
     }
 
@@ -145,8 +144,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       setAuthSuccessMsg(null);
       setLoginPassword('');
       setUnlockPin('');
-      // Force locked state on every open
-      setSession(null);
+
+      // Check if user already has an active, valid session
+      const existing = getActiveAdminSession();
+      if (existing && existing.token) {
+        setSession(existing);
+        setClaimedEmail(existing.email || AUTHORIZED_MASTER_EMAIL);
+        setLoginEmail(existing.email || AUTHORIZED_MASTER_EMAIL);
+        loadBookings();
+        setLoadingInitial(false);
+        return;
+      }
 
       // Verify master status & load designated master email
       const status = await checkAdminSlotStatus();
@@ -177,15 +185,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     e.preventDefault();
     setAuthError(null);
 
-    if (!loginEmail.trim() || !loginPassword.trim()) {
+    const cleanPass = loginPassword.trim();
+    if (!cleanPass) {
       setAuthError('Please enter your master administrator password.');
       return;
     }
 
     setAuthSubmitting(true);
     const res = await loginAdmin({
-      email: loginEmail,
-      password: loginPassword,
+      email: loginEmail.trim() || AUTHORIZED_MASTER_EMAIL,
+      password: cleanPass,
     });
     setAuthSubmitting(false);
 
@@ -203,13 +212,14 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     e.preventDefault();
     setAuthError(null);
 
-    if (!unlockPin.trim()) {
+    const cleanPin = unlockPin.trim();
+    if (!cleanPin) {
       setAuthError('Please enter your 4-digit Master Security PIN.');
       return;
     }
 
     setAuthSubmitting(true);
-    const res = await loginWithPin(unlockPin);
+    const res = await loginWithPin(cleanPin);
     setAuthSubmitting(false);
 
     if (res.success && res.session) {
