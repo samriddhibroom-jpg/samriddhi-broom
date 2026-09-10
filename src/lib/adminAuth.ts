@@ -1,18 +1,18 @@
 import { supabase, InquiryRecord } from './supabase';
+import { fetchCsrfToken, clearCsrfToken } from './csrf';
 
 export interface AdminUser {
   id: string;
   name: string;
   email: string;
   phone?: string;
-  password_hash: string;
-  pin_hash: string;
   created_at: string;
   role: 'master_admin';
 }
 
 export interface AdminSession {
   token: string;
+  refreshToken?: string;
   adminId: string;
   name: string;
   email: string;
@@ -29,13 +29,11 @@ export interface BookingRecord extends InquiryRecord {
 }
 
 export const AUTHORIZED_MASTER_EMAIL = 'samriddhibroom@gmail.com';
-export const AUTHORIZED_MASTER_NAME = 'Adhrit Master Admin';
-export const DEFAULT_INITIAL_MASTER_PASSWORD = 'Samriddhi@2026';
-export const DEFAULT_INITIAL_MASTER_PIN = '2026';
+export const AUTHORIZED_MASTER_NAME = 'Shri Ram Adhrit (Master Admin)';
+export const DEFAULT_INITIAL_MASTER_PASSWORD = 'Kumar@1987';
+export const DEFAULT_INITIAL_MASTER_PIN = '1987';
 
-const STORAGE_ADMIN_SLOT_KEY = 'adhrit_admin_master_account';
 const STORAGE_ADMIN_SESSION_KEY = 'adhrit_admin_active_session';
-const STORAGE_ADMIN_BOOKINGS_KEY = 'adhrit_inquiries_backup';
 const STORAGE_DELETED_BOOKINGS_KEY = 'adhrit_deleted_inquiries_ids';
 
 /**
@@ -43,7 +41,7 @@ const STORAGE_DELETED_BOOKINGS_KEY = 'adhrit_deleted_inquiries_ids';
  */
 export function getDeletedBookingIds(): Set<string> {
   try {
-    const raw = localStorage.getItem(STORAGE_DELETED_BOOKINGS_KEY);
+    const raw = sessionStorage.getItem(STORAGE_DELETED_BOOKINGS_KEY);
     if (!raw) return new Set<string>();
     const list: string[] = JSON.parse(raw);
     return new Set<string>(list);
@@ -53,13 +51,13 @@ export function getDeletedBookingIds(): Set<string> {
 }
 
 /**
- * Marks IDs as permanently deleted in local cache
+ * Marks IDs as deleted in session cache
  */
 export function markBookingIdsAsDeleted(ids: string[]): void {
   try {
     const current = getDeletedBookingIds();
     ids.forEach((id) => current.add(id));
-    localStorage.setItem(STORAGE_DELETED_BOOKINGS_KEY, JSON.stringify(Array.from(current)));
+    sessionStorage.setItem(STORAGE_DELETED_BOOKINGS_KEY, JSON.stringify(Array.from(current)));
   } catch {
     // Non-blocking
   }
@@ -76,70 +74,6 @@ export async function sha256(message: string): Promise<string> {
 }
 
 /**
- * Gets or initializes the immutable Master Admin record for samriddhibroom@gmail.com
- */
-export async function getOrInitMasterAdmin(): Promise<AdminUser> {
-  // 1. Check local storage
-  try {
-    const localData = localStorage.getItem(STORAGE_ADMIN_SLOT_KEY);
-    if (localData) {
-      const parsed: AdminUser = JSON.parse(localData);
-      if (parsed.email.toLowerCase() === AUTHORIZED_MASTER_EMAIL.toLowerCase()) {
-        return parsed;
-      }
-    }
-  } catch {
-    // Continue
-  }
-
-  // 2. Check Supabase
-  try {
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', AUTHORIZED_MASTER_EMAIL)
-      .limit(1);
-
-    if (!error && data && data.length > 0) {
-      const dbAdmin: AdminUser = data[0];
-      localStorage.setItem(STORAGE_ADMIN_SLOT_KEY, JSON.stringify(dbAdmin));
-      return dbAdmin;
-    }
-  } catch {
-    // Continue
-  }
-
-  // 3. Initialize default master admin
-  const defaultPasswordHash = await sha256(DEFAULT_INITIAL_MASTER_PASSWORD);
-  const defaultPinHash = await sha256(DEFAULT_INITIAL_MASTER_PIN);
-
-  const initialMasterAdmin: AdminUser = {
-    id: `ADMIN-MASTER-SAMRIDDHI`,
-    name: AUTHORIZED_MASTER_NAME,
-    email: AUTHORIZED_MASTER_EMAIL,
-    phone: '+91 9431105151',
-    password_hash: defaultPasswordHash,
-    pin_hash: defaultPinHash,
-    created_at: new Date().toISOString(),
-    role: 'master_admin',
-  };
-
-  try {
-    localStorage.setItem(STORAGE_ADMIN_SLOT_KEY, JSON.stringify(initialMasterAdmin));
-  } catch {
-    // Non-blocking
-  }
-
-  try {
-    await supabase.from('admin_users').upsert([initialMasterAdmin]);
-  } catch {
-    // Non-blocking
-  }
-
-  return initialMasterAdmin;
-}
-
-/**
  * Checks if the single admin slot has already been claimed.
  * ALWAYS returns true because the slot is pre-configured and locked to the business owner.
  */
@@ -149,12 +83,11 @@ export async function checkAdminSlotStatus(): Promise<{
   adminName: string;
   claimedAt?: string;
 }> {
-  const master = await getOrInitMasterAdmin();
   return {
     isClaimed: true,
-    adminEmail: master.email,
-    adminName: master.name,
-    claimedAt: master.created_at,
+    adminEmail: AUTHORIZED_MASTER_EMAIL,
+    adminName: AUTHORIZED_MASTER_NAME,
+    claimedAt: new Date().toISOString(),
   };
 }
 
@@ -170,13 +103,13 @@ export async function claimInitialAdminSlot(): Promise<{ success: boolean; error
 
 /**
  * Logs in the administrator via Email and Master Password
+ * Uses server-side timing-safe authentication and cryptographically signed session tokens.
  */
 export async function loginAdmin(credentials: {
   email: string;
   password: string;
 }): Promise<{ success: boolean; error?: string; session?: AdminSession }> {
   const emailClean = credentials.email.trim().toLowerCase();
-  const passwordHash = await sha256(credentials.password.trim());
 
   if (emailClean !== AUTHORIZED_MASTER_EMAIL.toLowerCase()) {
     return {
@@ -185,155 +118,194 @@ export async function loginAdmin(credentials: {
     };
   }
 
-  const master = await getOrInitMasterAdmin();
+  try {
+    const csrfToken = await fetchCsrfToken().catch(() => '');
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify({ email: emailClean, password: credentials.password }),
+    });
 
-  if (master.password_hash !== passwordHash) {
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.success && data.session) {
+      const session: AdminSession = {
+        token: data.session.token,
+        refreshToken: data.session.refreshToken,
+        adminId: 'ADMIN-MASTER-SAMRIDDHI',
+        name: data.session.name || AUTHORIZED_MASTER_NAME,
+        email: data.session.email || AUTHORIZED_MASTER_EMAIL,
+        loginTime: new Date().toISOString(),
+        expiresAt: data.session.expiresAt || Date.now() + 15 * 60 * 1000,
+      };
+
+      try {
+        sessionStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(session));
+        localStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(session));
+      } catch {
+        // Non-blocking
+      }
+
+      return { success: true, session };
+    }
+
+    if (res.status === 429) {
+      return {
+        success: false,
+        error: data.error || 'Too many login attempts. Access temporarily locked for 15 minutes.',
+      };
+    }
+
     return {
       success: false,
-      error: 'Incorrect administrator password. Please check your credentials or unlock using your 4-digit Security PIN.',
+      error: data.error || 'Incorrect administrator credentials. Please check your credentials or unlock using your 4-digit Security PIN.',
+    };
+  } catch (e) {
+    return {
+      success: false,
+      error: 'Unable to connect to authentication server. Please check your network connection.',
     };
   }
-
-  const session: AdminSession = {
-    token: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-    adminId: master.id,
-    name: master.name,
-    email: master.email,
-    loginTime: new Date().toISOString(),
-    expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2 hours
-  };
-
-  try {
-    localStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(session));
-  } catch {
-    // Non-blocking
-  }
-
-  return { success: true, session };
 }
 
 /**
  * Unlocks the admin terminal using the 4-digit master security PIN
+ * Verifies with the server-side timing-safe PIN handler.
  */
 export async function loginWithPin(
   pin: string
 ): Promise<{ success: boolean; error?: string; session?: AdminSession }> {
-  const pinHash = await sha256(pin.trim());
-  const master = await getOrInitMasterAdmin();
+  try {
+    const csrfToken = await fetchCsrfToken().catch(() => '');
+    const res = await fetch('/api/admin/unlock-pin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify({ pin: pin.trim() }),
+    });
 
-  if (master.pin_hash !== pinHash) {
+    const data = await res.json().catch(() => ({}));
+
+    if (res.ok && data.success && data.session) {
+      const session: AdminSession = {
+        token: data.session.token,
+        refreshToken: data.session.refreshToken,
+        adminId: 'ADMIN-MASTER-SAMRIDDHI',
+        name: data.session.name || AUTHORIZED_MASTER_NAME,
+        email: data.session.email || AUTHORIZED_MASTER_EMAIL,
+        loginTime: new Date().toISOString(),
+        expiresAt: data.session.expiresAt || Date.now() + 15 * 60 * 1000,
+      };
+
+      try {
+        sessionStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(session));
+        localStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(session));
+      } catch {
+        // Non-blocking
+      }
+
+      return { success: true, session };
+    }
+
+    if (res.status === 429) {
+      return {
+        success: false,
+        error: data.error || 'Too many attempts. Terminal locked for 15 minutes.',
+      };
+    }
+
     return {
       success: false,
-      error: 'Incorrect Security PIN. Please verify and re-enter.',
+      error: data.error || 'Incorrect Security PIN. Please verify and re-enter.',
+    };
+  } catch {
+    return {
+      success: false,
+      error: 'Unable to verify Security PIN. Please check your connection.',
     };
   }
-
-  const session: AdminSession = {
-    token: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-    adminId: master.id,
-    name: master.name,
-    email: master.email,
-    loginTime: new Date().toISOString(),
-    expiresAt: Date.now() + 2 * 60 * 60 * 1000,
-  };
-
-  try {
-    localStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(session));
-  } catch {
-    // Non-blocking
-  }
-
-  return { success: true, session };
 }
 
 /**
- * Changes administrator password or recovery PIN
+ * Changes administrator password or recovery PIN on the secure server
  */
 export async function updateAdminCredentials(params: {
   currentPasswordOrPin: string;
   newPassword?: string;
   newPin?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const master = await getOrInitMasterAdmin();
-  const inputHash = await sha256(params.currentPasswordOrPin.trim());
-
-  // Must match either current password or current PIN
-  if (master.password_hash !== inputHash && master.pin_hash !== inputHash) {
-    return {
-      success: false,
-      error: 'Current Password or PIN verification failed. Please try again.',
-    };
-  }
-
-  if (params.newPassword) {
-    if (params.newPassword.length < 6) {
-      return { success: false, error: 'New password must be at least 6 characters.' };
-    }
-    master.password_hash = await sha256(params.newPassword.trim());
-  }
-
-  if (params.newPin) {
-    if (params.newPin.trim().length < 4) {
-      return { success: false, error: 'Security PIN must be at least 4 digits.' };
-    }
-    master.pin_hash = await sha256(params.newPin.trim());
+  const session = getActiveAdminSession();
+  if (!session?.token) {
+    return { success: false, error: 'Administrative session expired. Please re-login.' };
   }
 
   try {
-    localStorage.setItem(STORAGE_ADMIN_SLOT_KEY, JSON.stringify(master));
-  } catch {
-    // Non-blocking
-  }
+    const csrfToken = await fetchCsrfToken().catch(() => '');
+    const res = await fetch('/api/admin/change-credentials', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.token}`,
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify(params),
+    });
 
-  try {
-    await supabase.from('admin_users').upsert([master]);
-  } catch {
-    // Non-blocking
-  }
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      // Re-authentication is required after credential change
+      logoutAdminSession();
+      return { success: true };
+    }
 
-  return { success: true };
+    return { success: false, error: data.error || 'Failed to update credentials.' };
+  } catch {
+    return { success: false, error: 'Network error updating credentials.' };
+  }
 }
 
 /**
- * Resets admin password using the master security PIN
+ * Resets admin password using the master security PIN (unauthenticated forgot-password flow)
  */
 export async function resetAdminPasswordWithPIN(
   pin: string,
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
-  const pinHash = await sha256(pin.trim());
-  const newPasswordHash = await sha256(newPassword.trim());
-
-  let adminRecord: AdminUser | null = null;
   try {
-    const raw = localStorage.getItem(STORAGE_ADMIN_SLOT_KEY);
-    if (raw) adminRecord = JSON.parse(raw);
+    const csrfToken = await fetchCsrfToken().catch(() => '');
+    const res = await fetch('/api/admin/reset-password-with-pin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify({
+        pin: pin.trim(),
+        newPassword: newPassword.trim(),
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      logoutAdminSession();
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error: data.error || 'Failed to reset password. Please verify your Security PIN.',
+    };
   } catch {
-    return { success: false, error: 'Could not access admin record.' };
+    return {
+      success: false,
+      error: 'Network error communicating with server. Please try again.',
+    };
   }
-
-  if (!adminRecord) {
-    return { success: false, error: 'No admin account configured.' };
-  }
-
-  if (adminRecord.pin_hash !== pinHash) {
-    return { success: false, error: 'Security PIN is incorrect.' };
-  }
-
-  adminRecord.password_hash = newPasswordHash;
-  localStorage.setItem(STORAGE_ADMIN_SLOT_KEY, JSON.stringify(adminRecord));
-
-  // Sync to Supabase if possible
-  try {
-    await supabase
-      .from('admin_users')
-      .update({ password_hash: newPasswordHash })
-      .eq('email', adminRecord.email);
-  } catch {
-    // Non-blocking
-  }
-
-  return { success: true };
 }
 
 /**
@@ -341,12 +313,15 @@ export async function resetAdminPasswordWithPIN(
  */
 export function getActiveAdminSession(): AdminSession | null {
   try {
-    const raw = localStorage.getItem(STORAGE_ADMIN_SESSION_KEY);
+    const raw = sessionStorage.getItem(STORAGE_ADMIN_SESSION_KEY) || localStorage.getItem(STORAGE_ADMIN_SESSION_KEY);
     if (!raw) return null;
     const session: AdminSession = JSON.parse(raw);
     if (Date.now() > session.expiresAt) {
-      logoutAdminSession();
-      return null;
+      // Attempt refresh if refresh token is available, else clean up
+      if (!session.refreshToken) {
+        logoutAdminSession();
+        return null;
+      }
     }
     return session;
   } catch {
@@ -355,47 +330,131 @@ export function getActiveAdminSession(): AdminSession | null {
 }
 
 /**
- * Logs out the admin session
+ * Ensures a valid access token, performing silent refresh via /api/admin/refresh-token if needed
  */
-export function logoutAdminSession(): void {
+export async function getValidAdminToken(): Promise<string | null> {
+  const session = getActiveAdminSession();
+  if (!session) return null;
+
+  // If token is valid for more than 60 seconds, use it directly
+  if (session.expiresAt - Date.now() > 60000) {
+    return session.token;
+  }
+
+  // Token is expired or expiring soon; use refresh token if available
+  if (session.refreshToken) {
+    try {
+      const csrfToken = await fetchCsrfToken().catch(() => '');
+      const res = await fetch('/api/admin/refresh-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.session) {
+          const updated: AdminSession = {
+            ...session,
+            token: data.session.token,
+            refreshToken: data.session.refreshToken || session.refreshToken,
+            expiresAt: data.session.expiresAt || Date.now() + 15 * 60 * 1000,
+          };
+          sessionStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(updated));
+          localStorage.setItem(STORAGE_ADMIN_SESSION_KEY, JSON.stringify(updated));
+          return updated.token;
+        }
+      }
+    } catch {
+      // Failed to refresh
+    }
+  }
+
+  // If expired and cannot refresh
+  if (Date.now() > session.expiresAt) {
+    logoutAdminSession();
+    return null;
+  }
+
+  return session.token;
+}
+
+/**
+ * Logs out the admin session by invalidating the refresh token server-side and clearing client tokens
+ */
+export async function logoutAdminSession(): Promise<void> {
   try {
-    localStorage.removeItem(STORAGE_ADMIN_SESSION_KEY);
+    const raw = sessionStorage.getItem(STORAGE_ADMIN_SESSION_KEY) || localStorage.getItem(STORAGE_ADMIN_SESSION_KEY);
+    if (raw) {
+      const session: AdminSession = JSON.parse(raw);
+      const csrfToken = await fetchCsrfToken().catch(() => '');
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+      }).catch(() => {});
+    }
   } catch {
     // Non-blocking
+  } finally {
+    try {
+      sessionStorage.removeItem(STORAGE_ADMIN_SESSION_KEY);
+      localStorage.removeItem(STORAGE_ADMIN_SESSION_KEY);
+      clearCsrfToken();
+    } catch {
+      // Non-blocking
+    }
   }
 }
 
 /**
- * Fetches all bookings and inquiries, combining Supabase and local storage
+ * Fetches all bookings and inquiries, combining the secure server endpoint and Supabase
  */
 export async function fetchAllBookings(): Promise<BookingRecord[]> {
   const bookingsMap = new Map<string, BookingRecord>();
   const deletedIds = getDeletedBookingIds();
+  const session = getActiveAdminSession();
 
-  // 1. Fetch from Local Storage buffer
-  try {
-    const rawLocal = localStorage.getItem(STORAGE_ADMIN_BOOKINGS_KEY);
-    if (rawLocal) {
-      const localList: any[] = JSON.parse(rawLocal);
-      localList.forEach((item, index) => {
-        const id = item.id || `LOCAL-${index}-${item.phone}`;
-        if (deletedIds.has(id)) return;
-        bookingsMap.set(id, {
-          id,
-          name: item.name || 'Anonymous Customer',
-          phone: item.phone || '',
-          email: item.email || '',
-          message: item.message || '',
-          source: item.source || 'Website Booking / Direct Enquiry',
-          dpdp_consent: Boolean(item.dpdp_consent),
-          status: item.status || 'new',
-          admin_notes: item.admin_notes || '',
-          created_at: item.created_at || item.saved_at || new Date().toISOString(),
-        });
+  // 1. Fetch from secure server API
+  const token = await getValidAdminToken();
+  if (token) {
+    try {
+      const res = await fetch('/api/admin/inquiries?limit=100', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          json.data.forEach((row: any) => {
+            const id = row.id;
+            if (deletedIds.has(id)) return;
+            bookingsMap.set(id, {
+              id,
+              name: row.name || 'Anonymous Customer',
+              phone: row.phone || '',
+              email: row.email || '',
+              message: row.message || '',
+              source: row.source || 'Website Booking / Direct Enquiry',
+              dpdp_consent: Boolean(row.dpdp_consent),
+              status: row.status || 'new',
+              admin_notes: row.admin_notes || '',
+              created_at: row.created_at || new Date().toISOString(),
+            });
+          });
+        }
+      }
+    } catch {
+      // Non-blocking
     }
-  } catch {
-    // Non-blocking
   }
 
   // 2. Fetch from Supabase 'inquiries' table
@@ -424,7 +483,7 @@ export async function fetchAllBookings(): Promise<BookingRecord[]> {
       });
     }
   } catch {
-    // Supabase table not created yet or offline
+    // Non-blocking
   }
 
   const allList = Array.from(bookingsMap.values());
@@ -440,24 +499,27 @@ export async function updateBookingRecord(
   id: string,
   updates: { status?: BookingRecord['status']; admin_notes?: string }
 ): Promise<boolean> {
-  // Update local storage backup
-  try {
-    const rawLocal = localStorage.getItem(STORAGE_ADMIN_BOOKINGS_KEY);
-    if (rawLocal) {
-      const localList: any[] = JSON.parse(rawLocal);
-      const updatedList = localList.map((item) => {
-        if (item.id === id || (item.phone && id.includes(item.phone))) {
-          return { ...item, ...updates };
-        }
-        return item;
+  const token = await getValidAdminToken();
+
+  // 1. Update via server API
+  if (token) {
+    try {
+      const csrfToken = await fetchCsrfToken().catch(() => '');
+      await fetch(`/api/admin/inquiries/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body: JSON.stringify(updates),
       });
-      localStorage.setItem(STORAGE_ADMIN_BOOKINGS_KEY, JSON.stringify(updatedList));
+    } catch {
+      // Non-blocking
     }
-  } catch {
-    // Non-blocking
   }
 
-  // Update Supabase
+  // 2. Update Supabase
   try {
     await supabase.from('inquiries').update(updates).eq('id', id);
   } catch {
@@ -492,16 +554,6 @@ export async function createManualBookingRecord(data: {
     created_at: new Date().toISOString(),
   };
 
-  // Save to local
-  try {
-    const raw = localStorage.getItem(STORAGE_ADMIN_BOOKINGS_KEY);
-    const list: any[] = raw ? JSON.parse(raw) : [];
-    list.unshift(newBooking);
-    localStorage.setItem(STORAGE_ADMIN_BOOKINGS_KEY, JSON.stringify(list));
-  } catch {
-    // Non-blocking
-  }
-
   // Save to Supabase
   try {
     await supabase.from('inquiries').insert([
@@ -523,36 +575,32 @@ export async function createManualBookingRecord(data: {
 }
 
 /**
- * Deletes a single booking / inquiry record from both local cache and Supabase
+ * Deletes a single booking / inquiry record
  */
 export async function deleteBookingRecord(id: string): Promise<boolean> {
-  // 1. Mark in permanent deleted set so it never reappears on re-fetch
   markBookingIdsAsDeleted([id]);
+  const token = await getValidAdminToken();
 
-  // 2. Remove from Local Storage buffer
-  try {
-    const raw = localStorage.getItem(STORAGE_ADMIN_BOOKINGS_KEY);
-    if (raw) {
-      const list: any[] = JSON.parse(raw);
-      const filtered = list.filter((item) => item.id !== id && !id.includes(item.id || '___'));
-      localStorage.setItem(STORAGE_ADMIN_BOOKINGS_KEY, JSON.stringify(filtered));
+  // 1. Delete on server API
+  if (token) {
+    try {
+      const csrfToken = await fetchCsrfToken().catch(() => '');
+      await fetch(`/api/admin/inquiries/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+      });
+    } catch {
+      // Non-blocking
     }
-  } catch {
-    // Non-blocking
   }
 
-  // 3. Attempt Supabase delete
+  // 2. Attempt Supabase delete
   try {
-    // If id is standard Supabase UUID or id
     if (!id.startsWith('LOCAL-') && !id.startsWith('MANUAL-') && !id.startsWith('SUPA-')) {
       await supabase.from('inquiries').delete().eq('id', id);
-    } else if (id.startsWith('SUPA-')) {
-      // It might be formatted as SUPA-phone-created_at
-      const parts = id.split('-');
-      if (parts.length >= 2) {
-        const phone = parts[1];
-        await supabase.from('inquiries').delete().eq('phone', phone);
-      }
     }
   } catch {
     // Non-blocking
@@ -566,24 +614,28 @@ export async function deleteBookingRecord(id: string): Promise<boolean> {
  */
 export async function deleteMultipleBookings(ids: string[]): Promise<{ count: number }> {
   if (ids.length === 0) return { count: 0 };
-
-  // 1. Mark in permanent deleted set
   markBookingIdsAsDeleted(ids);
+  const token = await getValidAdminToken();
 
-  // 2. Remove from local storage buffer
-  try {
-    const raw = localStorage.getItem(STORAGE_ADMIN_BOOKINGS_KEY);
-    if (raw) {
-      const list: any[] = JSON.parse(raw);
-      const idSet = new Set(ids);
-      const filtered = list.filter((item) => !idSet.has(item.id));
-      localStorage.setItem(STORAGE_ADMIN_BOOKINGS_KEY, JSON.stringify(filtered));
+  // 1. Delete via server API
+  if (token) {
+    try {
+      const csrfToken = await fetchCsrfToken().catch(() => '');
+      await fetch('/api/admin/inquiries/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body: JSON.stringify({ ids }),
+      });
+    } catch {
+      // Non-blocking
     }
-  } catch {
-    // Non-blocking
   }
 
-  // 3. Delete from Supabase for valid UUID/ID records
+  // 2. Delete from Supabase for valid UUID records
   try {
     const validIds = ids.filter(
       (id) => !id.startsWith('LOCAL-') && !id.startsWith('MANUAL-') && !id.startsWith('SUPA-')
@@ -622,4 +674,3 @@ export async function deleteOldInquiries(
 
   return { count: ids.length, deletedIds: ids };
 }
-

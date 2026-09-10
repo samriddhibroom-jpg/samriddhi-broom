@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import { fetchCsrfToken } from './csrf';
 
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL || 'https://bmomtedgvcciefdvoiad.supabase.co';
-const SUPABASE_ANON_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  'sb_publishable_wcZa6ykEGxTc-o3-4wjTFw_nqoioqmN';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize client only if valid configuration is provided
+export const supabase = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co',
+  SUPABASE_ANON_KEY || 'placeholder-anon-key'
+);
 
 export interface InquiryRecord {
   id?: string;
@@ -53,8 +55,9 @@ function backupInquiryForSession(record: InquiryRecord) {
 }
 
 /**
- * Submits an inquiry to Supabase.
- * Attempts inserting into 'inquiries', and falls back to 'enquiries' if configured with that name.
+ * Submits an inquiry. First routes through the hardened server-side endpoint (/api/inquiries)
+ * which enforces rate limiting, server-side sanitization, and IP abuse protection.
+ * Gracefully synchronizes with Supabase for persistent backup.
  */
 export async function submitInquiryToSupabase(
   data: Omit<InquiryRecord, 'id' | 'created_at'>
@@ -70,24 +73,65 @@ export async function submitInquiryToSupabase(
     created_at: new Date().toISOString(),
   };
 
+  // 1. Submit through secure backend proxy (Rate-limited & sanitized)
   try {
-    // Try primary table 'inquiries'
+    const csrfToken = await fetchCsrfToken().catch(() => '');
+    const res = await fetch('/api/inquiries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      // Also try sync directly to Supabase if accessible
+      try {
+        await supabase.from('inquiries').insert([payload]);
+      } catch {
+        // Non-blocking
+      }
+      return { success: true, message: 'Inquiry saved successfully to Adhrit Industries.' };
+    }
+
+    if (res.status === 429) {
+      const errData = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errData.error || 'Too many submissions from your network. Please wait a few minutes before trying again.',
+      };
+    }
+
+    if (res.status === 400) {
+      const errData = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errData.error || 'Please provide valid inquiry details.',
+      };
+    }
+  } catch {
+    // Server endpoint unreachable (offline mode), proceed to Supabase fallback
+  }
+
+  // 2. Fallback direct to Supabase
+  try {
     const { error: primaryError } = await supabase.from('inquiries').insert([payload]);
 
     if (!primaryError) {
-      return { success: true, message: 'Inquiry saved successfully to Supabase backend.' };
+      return { success: true, message: 'Inquiry saved successfully.' };
     }
 
     // If 'inquiries' table not found (PGRST205), try 'enquiries'
     if (primaryError.code === 'PGRST205' || primaryError.message?.includes('schema cache')) {
       const { error: altError } = await supabase.from('enquiries').insert([payload]);
       if (!altError) {
-        return { success: true, message: 'Inquiry saved successfully to Supabase backend.' };
+        return { success: true, message: 'Inquiry saved successfully.' };
       }
       backupInquiryForSession(payload);
       return {
         success: false,
-        error: `Supabase table 'inquiries' not found yet. Please create the 'inquiries' table in your Supabase SQL Editor.`,
+        error: `Inquiry saved locally. Backend table is undergoing initialization.`,
         savedLocally: true,
       };
     }
@@ -95,7 +139,7 @@ export async function submitInquiryToSupabase(
     backupInquiryForSession(payload);
     return {
       success: false,
-      error: primaryError.message || 'Failed to submit inquiry to Supabase.',
+      error: primaryError.message || 'Failed to submit inquiry.',
       savedLocally: true,
     };
   } catch (err: unknown) {
@@ -110,7 +154,8 @@ export async function submitInquiryToSupabase(
 }
 
 /**
- * Submits a statutory DPDP request to Supabase (table: 'dpdp_requests')
+ * Submits a statutory DPDP request through the hardened server-side endpoint (/api/dpdp-requests)
+ * with direct Supabase table fallback.
  */
 export async function submitDPDPRequestToSupabase(
   data: Omit<DPDPRequestRecord, 'id' | 'created_at'>
@@ -123,6 +168,39 @@ export async function submitDPDPRequestToSupabase(
     created_at: new Date().toISOString(),
   };
 
+  // 1. Submit through secure backend proxy
+  try {
+    const csrfToken = await fetchCsrfToken().catch(() => '');
+    const res = await fetch('/api/dpdp-requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      try {
+        await supabase.from('dpdp_requests').insert([payload]);
+      } catch {
+        // Non-blocking
+      }
+      return { success: true, message: 'DPDP request received successfully.' };
+    }
+
+    if (res.status === 429) {
+      const errData = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errData.error || 'Too many requests. Please wait a few minutes.',
+      };
+    }
+  } catch {
+    // Offline mode, proceed to direct Supabase
+  }
+
+  // 2. Direct Supabase fallback
   try {
     const { error } = await supabase.from('dpdp_requests').insert([payload]);
     if (!error) {
@@ -130,6 +208,6 @@ export async function submitDPDPRequestToSupabase(
     }
     return { success: false, error: error.message };
   } catch (err: unknown) {
-    return { success: false, error: err instanceof Error ? err.message : 'Error' };
+    return { success: false, error: err instanceof Error ? err.message : 'Submission failed.' };
   }
 }

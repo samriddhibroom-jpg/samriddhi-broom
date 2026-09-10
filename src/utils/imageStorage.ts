@@ -1,4 +1,6 @@
 // Durable image persistence utility for SAMRIDDHI Broom models
+import { getActiveAdminSession } from '../lib/adminAuth';
+import { fetchCsrfToken } from '../lib/csrf';
 
 const DB_NAME = 'samriddhi_broom_db';
 const DB_VERSION = 1;
@@ -133,13 +135,22 @@ export async function persistBroomImage(modelId: string, file: File): Promise<st
 
   // 3. Save to server disk
   try {
+    const session = getActiveAdminSession();
+    const csrfToken = await fetchCsrfToken().catch(() => '');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+    };
+    if (session?.token) {
+      headers['Authorization'] = `Bearer ${session.token}`;
+    }
     await fetch('/api/save-broom-image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ modelId, dataUrl: optimizedDataUrl }),
     });
-  } catch (e) {
-    console.warn('Server disk save failed, client copy preserved', e);
+  } catch {
+    // Non-blocking fallback to local IndexedDB and localStorage
   }
 
   // 4. Dispatch event to update all instances

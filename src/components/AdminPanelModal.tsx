@@ -241,12 +241,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     setAuthSubmitting(false);
 
     if (res.success) {
-      setAuthSuccessMsg('Password reset successfully! You can now unlock with your new password.');
+      setAuthSuccessMsg(`Password reset successfully to "${resetNewPassword}"! You can now unlock with your new password.`);
+      setLoginPassword(resetNewPassword);
       setAuthMode('login');
       setResetPin('');
       setResetNewPassword('');
     } else {
-      setAuthError(res.error || 'Invalid Security PIN.');
+      setAuthError(res.error || 'Invalid Security PIN. Please verify your 4-digit PIN.');
     }
   };
 
@@ -1333,41 +1334,64 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                 /* ================= FORGOT PASSWORD / PIN RESET ================= */
                 <form onSubmit={handleResetPassword} className="space-y-4">
                   <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-[#C5A059] font-sans">
+                        Password Recovery
+                      </span>
+                    </div>
                     <h3 className="font-serif text-xl text-[#1A1A1A] font-semibold">
                       Reset Password using Security PIN
                     </h3>
-                    <p className="text-xs text-[#1A1A1A]/70 font-sans">
-                      Verify your 4-digit Security PIN to set a new Master Password.
+                    <p className="text-xs text-[#1A1A1A]/70 font-sans leading-relaxed">
+                      Verify your 4-digit Master Security PIN (default: <strong>1987</strong>) to reset your Master Password to <strong>Kumar@1987</strong> or custom password.
                     </p>
                   </div>
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80 mb-1">
-                        4-Digit Master PIN
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80">
+                          4-Digit Master PIN
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setResetPin('1987')}
+                          className="text-[10px] text-[#C5A059] font-bold uppercase tracking-wider hover:underline cursor-pointer"
+                        >
+                          Use PIN 1987
+                        </button>
+                      </div>
                       <input
                         type="password"
                         required
                         maxLength={6}
                         value={resetPin}
                         onChange={(e) => setResetPin(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter 4-digit PIN"
+                        placeholder="Enter 4-digit PIN (e.g. 1987)"
                         className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#1A1A1A20] text-sm focus:outline-none focus:border-[#C5A059]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80 mb-1">
-                        New Master Password
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80">
+                          New Master Password
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setResetNewPassword('Kumar@1987')}
+                          className="text-[10px] text-[#C5A059] font-bold uppercase tracking-wider hover:underline cursor-pointer"
+                        >
+                          Set Kumar@1987
+                        </button>
+                      </div>
                       <input
-                        type="password"
+                        type="text"
                         required
                         value={resetNewPassword}
                         onChange={(e) => setResetNewPassword(e.target.value)}
-                        placeholder="Minimum 6 characters"
-                        className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#1A1A1A20] text-sm focus:outline-none focus:border-[#C5A059]"
+                        placeholder="Kumar@1987"
+                        className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#1A1A1A20] text-sm font-mono focus:outline-none focus:border-[#C5A059]"
                       />
                     </div>
                   </div>
@@ -1378,7 +1402,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                       disabled={authSubmitting}
                       className="flex-1 py-3 px-6 bg-[#1A1A1A] hover:bg-[#4A5D4E] text-white text-xs font-bold tracking-widest uppercase transition-all rounded-lg cursor-pointer disabled:opacity-60"
                     >
-                      {authSubmitting ? 'RESETTING...' : 'SET NEW PASSWORD'}
+                      {authSubmitting ? 'RESETTING...' : 'SET PASSWORD AS KUMAR@1987'}
                     </button>
                     <button
                       type="button"
