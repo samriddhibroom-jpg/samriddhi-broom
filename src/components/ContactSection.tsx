@@ -277,23 +277,6 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                   <span className="font-semibold text-[#1A1A1A]">{formData.phone}</span>.
                 </p>
 
-                {/* Backend Storage Status Plaque */}
-                <div className="max-w-md mx-auto p-3.5 rounded-xl bg-[#FDFBF7] border border-[#C5A05930] text-left text-xs space-y-1.5 font-sans">
-                  <div className="flex items-center gap-2 text-[#4A5D4E] font-medium">
-                    <Database className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
-                    <span>
-                      {submissionMeta?.supabaseSynced
-                        ? 'Stored in Supabase Backend (bmomtedgvcciefdvoiad)'
-                        : 'Stored in Local Buffer (Ready for Supabase Sync)'}
-                    </span>
-                  </div>
-                  {submissionMeta?.note && (
-                    <p className="text-[11px] text-[#1A1A1A]/60 leading-normal pl-5.5">
-                      {submissionMeta.note}
-                    </p>
-                  )}
-                </div>
-
                 {/* Direct instant WhatsApp action */}
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <a

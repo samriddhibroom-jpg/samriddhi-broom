@@ -180,6 +180,37 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     }
   };
 
+  // Live Auto-Refresh & Synchronization with Website Form Submissions
+  useEffect(() => {
+    if (!isOpen || !session) return;
+
+    // Refresh immediately when a form is submitted
+    const handleInquiryAdded = () => {
+      loadBookings();
+    };
+
+    // Refresh when user returns to this window or tab
+    const handleFocus = () => {
+      loadBookings();
+    };
+
+    // Auto-poll every 5 seconds to ensure newly incoming submissions reflect instantly
+    const interval = setInterval(() => {
+      loadBookings();
+    }, 5000);
+
+    window.addEventListener('adhrit_inquiry_added', handleInquiryAdded);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleInquiryAdded);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('adhrit_inquiry_added', handleInquiryAdded);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleInquiryAdded);
+    };
+  }, [isOpen, session]);
+
   // Sign In with Master Password
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

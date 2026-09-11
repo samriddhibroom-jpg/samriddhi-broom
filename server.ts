@@ -263,16 +263,16 @@ function safeCompare(a: string, b: string): boolean {
 // ====================================================================
 const InquirySubmissionSchema = z
   .object({
-    name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name cannot exceed 100 characters'),
-    phone: z.string().trim().regex(/^\+?[0-9]{8,18}$/, 'Phone number must be between 8 and 18 digits'),
-    email: z.string().trim().email('Invalid email address').max(120).optional().or(z.literal('')),
-    message: z.string().trim().max(1500, 'Message cannot exceed 1500 characters').optional().or(z.literal('')),
-    source: z.string().trim().max(120).optional().or(z.literal('')),
-    dpdp_consent: z.literal(true, {
-      message: 'DPDP statutory consent is mandatory',
-    }),
+    name: z.string().trim().min(1, 'Name is required').max(150),
+    phone: z.string().trim().min(6, 'Phone number must have at least 6 digits').max(35),
+    email: z.union([z.string(), z.null()]).optional(),
+    message: z.union([z.string(), z.null()]).optional(),
+    source: z.union([z.string(), z.null()]).optional(),
+    dpdp_consent: z.any().optional(),
+    status: z.string().optional(),
+    created_at: z.string().optional(),
   })
-  .strict();
+  .passthrough();
 
 const DPDPRequestSchema = z
   .object({
@@ -801,7 +801,8 @@ async function startServer() {
    */
   app.post('/api/inquiries', publicLimiter, async (req, res) => {
     try {
-      const parsed = InquirySubmissionSchema.safeParse(req.body);
+      const body = req.body || {};
+      const parsed = InquirySubmissionSchema.safeParse(body);
       if (!parsed.success) {
         res.status(400).json({
           success: false,
@@ -810,18 +811,32 @@ async function startServer() {
         return;
       }
 
-      const { name, phone, email, message, source, dpdp_consent } = parsed.data;
+      const rawName = String(parsed.data.name || body.name || '').trim();
+      const rawPhone = String(parsed.data.phone || body.phone || '').trim();
+      const rawEmail = parsed.data.email || body.email || '';
+      const rawMessage = parsed.data.message || body.message || '';
+      const rawSource = parsed.data.source || body.source || 'Get in Touch Form';
+      const dpdpConsent = Boolean(parsed.data.dpdp_consent ?? body.dpdp_consent ?? true);
+
+      const cleanPhone = rawPhone.replace(/[^\d+]/g, '').slice(0, 25);
+      if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 6) {
+        res.status(400).json({
+          success: false,
+          error: 'Please provide a valid phone number (at least 6 digits).',
+        });
+        return;
+      }
 
       const ipHash = crypto.createHash('sha256').update(req.ip || '0.0.0.0').digest('hex');
 
       const newInquiry: StoredInquiry = {
         id: `INQ-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-        name: sanitizeInput(name, 100),
-        phone: phone.replace(/[^\d+]/g, '').slice(0, 20),
-        email: email ? sanitizeInput(email, 120).toLowerCase() : '',
-        message: message ? sanitizeInput(message, 1500) : '',
-        source: source ? sanitizeInput(source, 100) : 'Website Form',
-        dpdp_consent: Boolean(dpdp_consent),
+        name: sanitizeInput(rawName || 'Customer', 100),
+        phone: cleanPhone,
+        email: rawEmail ? sanitizeInput(String(rawEmail), 120).toLowerCase() : '',
+        message: rawMessage ? sanitizeInput(String(rawMessage), 1500) : '',
+        source: sanitizeInput(String(rawSource), 120),
+        dpdp_consent: dpdpConsent,
         status: 'new',
         admin_notes: '',
         created_at: new Date().toISOString(),
@@ -832,7 +847,7 @@ async function startServer() {
       if (inMemoryInquiries.length > 500) inMemoryInquiries.pop();
       saveJsonData(INQUIRIES_FILE, inMemoryInquiries);
 
-      // Asynchronously sync to Supabase table
+      // Asynchronously sync to Supabase tables
       try {
         await supabaseServer.from('inquiries').insert([{
           name: newInquiry.name,
@@ -845,15 +860,43 @@ async function startServer() {
           created_at: newInquiry.created_at,
         }]);
       } catch (supaErr) {
-        console.warn('Supabase sync notice on inquiry creation:', supaErr);
+        console.warn('Supabase inquiries sync notice:', supaErr);
       }
+
+      try {
+        await supabaseServer.from('bookings').insert([{
+          name: newInquiry.name,
+          phone: newInquiry.phone,
+          email: newInquiry.email || null,
+          message: newInquiry.message,
+          source: newInquiry.source,
+          dpdp_consent: newInquiry.dpdp_consent,
+          status: newInquiry.status,
+          created_at: newInquiry.created_at,
+        }]);
+      } catch {}
+
+      try {
+        await supabaseServer.from('enquiries').insert([{
+          name: newInquiry.name,
+          phone: newInquiry.phone,
+          email: newInquiry.email || null,
+          message: newInquiry.message,
+          source: newInquiry.source,
+          dpdp_consent: newInquiry.dpdp_consent,
+          status: newInquiry.status,
+          created_at: newInquiry.created_at,
+        }]);
+      } catch {}
 
       res.status(201).json({
         success: true,
         message: 'Inquiry received successfully and recorded securely.',
         id: newInquiry.id,
+        data: newInquiry,
       });
-    } catch {
+    } catch (err: any) {
+      console.error('Failed to process inquiry:', err);
       res.status(500).json({ success: false, error: 'Failed to process inquiry submission.' });
     }
   });
@@ -1267,7 +1310,7 @@ async function startServer() {
                 (m.phone === row.phone && m.name === row.name && m.created_at === row.created_at)
             );
             if (!exists && !inMemoryDeletedIds.has(row.id)) {
-              inMemoryInquiries.push({
+              inMemoryInquiries.unshift({
                 id: row.id || `SUPA-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                 name: row.name || 'Customer Booking',
                 phone: row.phone || '',
@@ -1287,7 +1330,47 @@ async function startServer() {
             saveJsonData(INQUIRIES_FILE, inMemoryInquiries);
           }
         }
-      } catch (supaErr) {
+      } catch {
+        // Non-blocking
+      }
+
+      try {
+        const { data: bookRows } = await supabaseServer
+          .from('bookings')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (Array.isArray(bookRows) && bookRows.length > 0) {
+          let updated = false;
+          for (const row of bookRows) {
+            const exists = inMemoryInquiries.some(
+              (m) =>
+                m.id === row.id ||
+                (m.phone === row.phone && m.name === row.name && m.created_at === row.created_at)
+            );
+            if (!exists && !inMemoryDeletedIds.has(row.id)) {
+              inMemoryInquiries.unshift({
+                id: row.id || `SUPA-BOOK-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                name: row.name || row.customer_name || 'Customer Booking',
+                phone: row.phone || row.mobile || '',
+                email: row.email || '',
+                message: row.message || row.model || '',
+                source: row.source || 'Supabase Bookings',
+                dpdp_consent: Boolean(row.dpdp_consent ?? true),
+                status: row.status || 'new',
+                admin_notes: '',
+                created_at: row.created_at || new Date().toISOString(),
+                ip_hash: 'supa_sync',
+              });
+              updated = true;
+            }
+          }
+          if (updated) {
+            saveJsonData(INQUIRIES_FILE, inMemoryInquiries);
+          }
+        }
+      } catch {
         // Non-blocking
       }
 

@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "INQ-1789127161111-c13cc355",
+    "name": "Samriddhi Broom Wholesale",
+    "phone": "9876543210",
+    "email": "samriddhibroom@gmail.com",
+    "message": "Looking for 500 units of Silver Grass Brooms with customized packaging.",
+    "source": "Get in Touch / Direct Inquiry Form",
+    "dpdp_consent": true,
+    "status": "new",
+    "admin_notes": "",
+    "created_at": "2026-09-11T11:46:01.112Z",
+    "ip_hash": "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+  },
+  {
+    "id": "INQ-1789127166469-395634d4",
+    "name": "Rajesh Kumar",
+    "phone": "+919988776655",
+    "email": "",
+    "message": "Distributorship enquiry for Bihar region",
+    "source": "Get in Touch / Direct Inquiry Form",
+    "dpdp_consent": true,
+    "status": "new",
+    "admin_notes": "",
+    "created_at": "2026-09-11T11:46:06.469Z",
+    "ip_hash": "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+  }
+]

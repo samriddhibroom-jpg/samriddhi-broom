@@ -1,0 +1,37 @@
+[
+  {
+    "sessionId": "711f9aca8bda9ed0d485b3e73da8a652",
+    "email": "samriddhibroom@gmail.com",
+    "refreshToken": "c84879b05783adff2a0d23f308ea36f133145bccdb94e530600136b9124dd0dc",
+    "createdAt": 1789126781813,
+    "expiresAt": 1789731581813
+  },
+  {
+    "sessionId": "c1dd8bb397d713883ccc265c4dea051a",
+    "email": "samriddhibroom@gmail.com",
+    "refreshToken": "7c1a7859a1d5dea5ebd20d1580fb1c1a0c9c9a5bc4327035a39cc4bf7f96f36f",
+    "createdAt": 1789127176413,
+    "expiresAt": 1789731976413
+  },
+  {
+    "sessionId": "84a83a7413eac68026af1d9caf25ae3b",
+    "email": "samriddhibroom@gmail.com",
+    "refreshToken": "d9d7ac5ba33563cfedbdff1ec8c0901bdfc2eef957d1e63198d1428d987009b9",
+    "createdAt": 1789127179788,
+    "expiresAt": 1789731979788
+  },
+  {
+    "sessionId": "ba4e30ab05f04461943c5844aa224141",
+    "email": "samriddhibroom@gmail.com",
+    "refreshToken": "69194b7c6da077c5269cd5790b0e615fee1c55c79909ec01f85fbcf2840e2e11",
+    "createdAt": 1789127183734,
+    "expiresAt": 1789731983734
+  },
+  {
+    "sessionId": "c8d015ad593dcd7ec5ba35817794a548",
+    "email": "samriddhibroom@gmail.com",
+    "refreshToken": "e986362e24b7308aafcb4951e1b700232aee50dc3b542c3c480c28f388af3148",
+    "createdAt": 1789127216262,
+    "expiresAt": 1789732016262
+  }
+]
