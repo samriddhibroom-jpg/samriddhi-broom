@@ -1,15 +1,1 @@
-[
-  {
-    "id": "INQ-1789059007775-badd90a5",
-    "name": "Test Customer",
-    "phone": "9876543210",
-    "email": "test@example.com",
-    "message": "Hello from auto setup",
-    "source": "Website Form",
-    "dpdp_consent": true,
-    "status": "new",
-    "admin_notes": "",
-    "created_at": "2026-09-10T16:50:07.775Z",
-    "ip_hash": "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
-  }
-]
+[]

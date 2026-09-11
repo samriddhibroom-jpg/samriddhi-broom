@@ -1,8 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 import { fetchCsrfToken } from './csrf';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+export const SUPABASE_PROJECT_ID = 'bmomtedgvcciefdvoiad';
+export const DEFAULT_SUPABASE_URL = 'https://bmomtedgvcciefdvoiad.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_wcZa6ykEGxTc-o3-4wjTFw_nqoioqmN';
+
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL ||
+  (typeof process !== 'undefined' ? process.env?.SUPABASE_URL : '') ||
+  DEFAULT_SUPABASE_URL;
+
+const SUPABASE_ANON_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  (typeof process !== 'undefined' ? process.env?.SUPABASE_ANON_KEY : '') ||
+  DEFAULT_SUPABASE_ANON_KEY;
 
 export const HAS_SUPABASE = Boolean(
   SUPABASE_URL &&
@@ -12,10 +23,7 @@ export const HAS_SUPABASE = Boolean(
 );
 
 // Initialize client only if valid configuration is provided
-export const supabase = createClient(
-  SUPABASE_URL || 'https://placeholder.supabase.co',
-  SUPABASE_ANON_KEY || 'placeholder-anon-key'
-);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export interface InquiryRecord {
   id?: string;
@@ -48,16 +56,24 @@ export interface SubmitResult {
 /**
  * Ephemeral session fallback for offline/network retry without exposing PII in persistent localStorage
  */
-function backupInquiryForSession(record: InquiryRecord) {
+export function backupInquiryForSession(record: InquiryRecord) {
   try {
     const existing = JSON.parse(sessionStorage.getItem('adhrit_session_inquiries') || '[]');
     existing.unshift({
       ...record,
       saved_at: new Date().toISOString(),
     });
-    sessionStorage.setItem('adhrit_session_inquiries', JSON.stringify(existing.slice(0, 10)));
+    sessionStorage.setItem('adhrit_session_inquiries', JSON.stringify(existing.slice(0, 20)));
   } catch {
     // Non-blocking fallback
+  }
+}
+
+export function getSessionInquiries(): InquiryRecord[] {
+  try {
+    return JSON.parse(sessionStorage.getItem('adhrit_session_inquiries') || '[]');
+  } catch {
+    return [];
   }
 }
 

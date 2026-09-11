@@ -1,4 +1,4 @@
-import { supabase, HAS_SUPABASE, InquiryRecord } from './supabase';
+import { supabase, HAS_SUPABASE, InquiryRecord, getSessionInquiries, backupInquiryForSession } from './supabase';
 import { fetchCsrfToken, clearCsrfToken } from './csrf';
 
 export interface AdminUser {
@@ -521,12 +521,11 @@ export async function logoutAdminSession(): Promise<void> {
 }
 
 /**
- * Fetches all bookings and inquiries, combining the secure server endpoint and Supabase
+ * Fetches all bookings and inquiries, combining the secure server endpoint, direct Supabase tables, and session cache
  */
 export async function fetchAllBookings(): Promise<BookingRecord[]> {
   const bookingsMap = new Map<string, BookingRecord>();
   const deletedIds = getDeletedBookingIds();
-  const session = getActiveAdminSession();
 
   // 1. Fetch from secure server API
   const token = await getValidAdminToken();
@@ -563,35 +562,122 @@ export async function fetchAllBookings(): Promise<BookingRecord[]> {
     }
   }
 
-  // 2. Fetch from Supabase 'inquiries' table (if configured)
+  // 2. Fetch directly from Supabase tables ('inquiries', 'bookings', 'enquiries')
   if (HAS_SUPABASE) {
+    // Primary: 'inquiries' table
     try {
       const { data, error } = await supabase
         .from('inquiries')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      if (!error && Array.isArray(data)) {
         data.forEach((row: any) => {
-          const id = row.id || `SUPA-${row.phone}-${row.created_at}`;
+          const id = row.id ? String(row.id) : `SUPA-INQ-${row.phone || 'c'}-${row.created_at || Date.now()}`;
           if (deletedIds.has(id)) return;
+          const existing = bookingsMap.get(id);
           bookingsMap.set(id, {
             id,
-            name: row.name || 'Anonymous Customer',
-            phone: row.phone || '',
-            email: row.email || '',
-            message: row.message || '',
-            source: row.source || 'Website Booking / Direct Enquiry',
-            dpdp_consent: Boolean(row.dpdp_consent),
-            status: row.status || 'new',
-            admin_notes: row.admin_notes || '',
-            created_at: row.created_at || new Date().toISOString(),
+            name: row.name || row.customer_name || row.full_name || existing?.name || 'Customer Booking',
+            phone: row.phone || row.mobile || row.contact || existing?.phone || '',
+            email: row.email || existing?.email || '',
+            message: row.message || row.notes || row.details || existing?.message || '',
+            source: row.source || existing?.source || 'Supabase Online Booking',
+            dpdp_consent: Boolean(row.dpdp_consent ?? existing?.dpdp_consent ?? true),
+            status: row.status || existing?.status || 'new',
+            admin_notes: row.admin_notes || existing?.admin_notes || '',
+            created_at: row.created_at || existing?.created_at || new Date().toISOString(),
           });
         });
       }
     } catch {
       // Non-blocking
     }
+
+    // Secondary: 'bookings' table
+    try {
+      const { data: bData, error: bErr } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!bErr && Array.isArray(bData)) {
+        bData.forEach((row: any) => {
+          const id = row.id ? String(row.id) : `SUPA-BOOK-${row.phone || 'c'}-${row.created_at || Date.now()}`;
+          if (deletedIds.has(id)) return;
+          const existing = bookingsMap.get(id);
+          bookingsMap.set(id, {
+            id,
+            name: row.name || row.customer_name || row.full_name || existing?.name || 'Customer Booking',
+            phone: row.phone || row.mobile || row.contact || existing?.phone || '',
+            email: row.email || existing?.email || '',
+            message: row.message || row.model || row.notes || existing?.message || '',
+            source: row.source || existing?.source || 'Supabase Bookings',
+            dpdp_consent: Boolean(row.dpdp_consent ?? existing?.dpdp_consent ?? true),
+            status: row.status || existing?.status || 'new',
+            admin_notes: row.admin_notes || existing?.admin_notes || '',
+            created_at: row.created_at || existing?.created_at || new Date().toISOString(),
+          });
+        });
+      }
+    } catch {
+      // Non-blocking
+    }
+
+    // Tertiary: 'enquiries' table
+    try {
+      const { data: eData, error: eErr } = await supabase
+        .from('enquiries')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!eErr && Array.isArray(eData)) {
+        eData.forEach((row: any) => {
+          const id = row.id ? String(row.id) : `SUPA-ENQ-${row.phone || 'c'}-${row.created_at || Date.now()}`;
+          if (deletedIds.has(id)) return;
+          const existing = bookingsMap.get(id);
+          bookingsMap.set(id, {
+            id,
+            name: row.name || row.customer_name || existing?.name || 'Customer Enquiry',
+            phone: row.phone || row.mobile || existing?.phone || '',
+            email: row.email || existing?.email || '',
+            message: row.message || existing?.message || '',
+            source: row.source || existing?.source || 'Supabase Enquiries',
+            dpdp_consent: Boolean(row.dpdp_consent ?? existing?.dpdp_consent ?? true),
+            status: row.status || existing?.status || 'new',
+            admin_notes: row.admin_notes || existing?.admin_notes || '',
+            created_at: row.created_at || existing?.created_at || new Date().toISOString(),
+          });
+        });
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
+
+  // 3. Merge local session inquiries
+  try {
+    const sessionInquiries = getSessionInquiries();
+    if (Array.isArray(sessionInquiries)) {
+      sessionInquiries.forEach((item: any, idx: number) => {
+        const id = item.id || `SESSION-${idx}-${item.phone || 'cust'}`;
+        if (deletedIds.has(id) || bookingsMap.has(id)) return;
+        bookingsMap.set(id, {
+          id,
+          name: item.name || 'Website Inquiry',
+          phone: item.phone || '',
+          email: item.email || '',
+          message: item.message || '',
+          source: item.source || 'Local Session Cache',
+          dpdp_consent: Boolean(item.dpdp_consent ?? true),
+          status: item.status || 'new',
+          admin_notes: item.admin_notes || '',
+          created_at: item.created_at || (item as any).saved_at || new Date().toISOString(),
+        });
+      });
+    }
+  } catch {
+    // Non-blocking
   }
 
   const allList = Array.from(bookingsMap.values());
@@ -628,10 +714,17 @@ export async function updateBookingRecord(
   }
 
   // 2. Update Supabase
-  try {
-    await supabase.from('inquiries').update(updates).eq('id', id);
-  } catch {
-    // Non-blocking
+  if (HAS_SUPABASE) {
+    try {
+      await supabase.from('inquiries').update(updates).eq('id', id);
+    } catch {
+      // Non-blocking
+    }
+    try {
+      await supabase.from('bookings').update(updates).eq('id', id);
+    } catch {
+      // Non-blocking
+    }
   }
 
   return true;
@@ -662,22 +755,56 @@ export async function createManualBookingRecord(data: {
     created_at: new Date().toISOString(),
   };
 
-  // Save to Supabase
-  try {
-    await supabase.from('inquiries').insert([
-      {
-        name: newBooking.name,
-        phone: newBooking.phone,
-        email: newBooking.email,
-        message: newBooking.message,
-        source: newBooking.source,
-        status: newBooking.status,
-        created_at: newBooking.created_at,
-      },
-    ]);
-  } catch {
-    // Non-blocking
+  // 1. Save to Server
+  const token = await getValidAdminToken();
+  if (token) {
+    try {
+      const csrfToken = await fetchCsrfToken().catch(() => '');
+      await fetch('/api/admin/inquiries/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        },
+        body: JSON.stringify(newBooking),
+      });
+    } catch {
+      // Non-blocking
+    }
   }
+
+  // 2. Save to Supabase
+  if (HAS_SUPABASE) {
+    try {
+      await supabase.from('inquiries').insert([
+        {
+          name: newBooking.name,
+          phone: newBooking.phone,
+          email: newBooking.email || null,
+          message: newBooking.message,
+          source: newBooking.source,
+          status: newBooking.status,
+          created_at: newBooking.created_at,
+          dpdp_consent: true,
+        },
+      ]);
+    } catch {
+      // Non-blocking
+    }
+  }
+
+  // 3. Local session backup
+  backupInquiryForSession({
+    name: newBooking.name,
+    phone: newBooking.phone,
+    email: newBooking.email,
+    message: newBooking.message,
+    source: newBooking.source,
+    dpdp_consent: true,
+    status: newBooking.status,
+    created_at: newBooking.created_at,
+  });
 
   return newBooking;
 }
