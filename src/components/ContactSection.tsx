@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Phone, MessageSquare, Send, CheckCircle2, Check, AlertCircle, ArrowRight, ShieldCheck, Lock, Database } from 'lucide-react';
+import { Phone, MessageSquare, Send, CheckCircle2, Check, AlertCircle, ArrowRight, ShieldCheck, Lock } from 'lucide-react';
 import { BRAND_DATA } from '../data/brandData';
 import { GoldDivider, BotanicalCorner } from './OrnamentalAssets';
 import { submitInquiryToSupabase } from '../lib/supabase';
@@ -264,9 +264,6 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#C5A059] block font-sans">
-                    {submissionMeta?.refId ? `Reference: ${submissionMeta.refId}` : 'Enquiry Logged'}
-                  </span>
                   <h3 className="font-serif text-2xl sm:text-3xl text-[#1A1A1A]">
                     Enquiry Received with Thanks
                   </h3>
@@ -500,12 +497,6 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                   <Send className="w-3.5 h-3.5 text-[#C5A059] group-hover:translate-x-0.5 transition-transform" />
                   <span>{submitting ? 'RECORDING IN BACKEND...' : 'SUBMIT ENQUIRY'}</span>
                 </button>
-
-                {/* Secure Backend Ingestion Trust Line */}
-                <div className="flex items-center justify-center gap-2 text-[10px] text-[#1A1A1A]/50 font-sans">
-                  <Database className="w-3 h-3 text-[#C5A059]" />
-                  <span>Direct Supabase backend ingestion • TLS 1.3 encrypted • Zero-spam guaranteed</span>
-                </div>
               </form>
             )}
           </div>

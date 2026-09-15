@@ -46,7 +46,7 @@ export const LocationSection: React.FC = () => {
 
               <div>
                 <span className="text-[10px] font-bold tracking-widest text-[#C5A059] uppercase block font-sans">
-                  Official Venue & Premises
+                  Manufacturing Unit & Registered Office
                 </span>
                 <h3 className="font-serif text-2xl sm:text-3xl text-[#1A1A1A] mt-1 font-light">
                   {BRAND_DATA.openingCeremony.venueName}
@@ -54,16 +54,28 @@ export const LocationSection: React.FC = () => {
               </div>
 
               <div className="space-y-2 text-sm sm:text-base text-[#1A1A1A]/80 font-sans border-l-2 border-[#C5A059] pl-4">
-                <p>{BRAND_DATA.openingCeremony.street}</p>
-                <p>{BRAND_DATA.openingCeremony.area}</p>
-                <p className="font-medium text-[#1A1A1A]">{BRAND_DATA.openingCeremony.cityState}</p>
+                <p className="font-medium text-[#1A1A1A]">71, DG Road, Ghulmohar Parks</p>
+                <p>Lalpur</p>
+                <p className="font-medium text-[#1A1A1A]">Ranchi, Jharkhand</p>
               </div>
 
-              <div className="pt-2 border-t border-[#1A1A1A10] space-y-1 text-xs text-[#1A1A1A]/70">
-                <span className="block text-[10px] uppercase tracking-wider text-[#1A1A1A]/50 font-semibold">
-                  Landmark Context
-                </span>
-                <p>Near Dhobi Ghat, Lower Burdwan Compound Corridor, Lalpur</p>
+              <div className="pt-2 border-t border-[#1A1A1A10] space-y-1.5 text-xs text-[#1A1A1A]/80 font-sans">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-[#1A1A1A]/60 font-semibold">
+                    Mobile:
+                  </span>
+                  <a href={`tel:${BRAND_DATA.phone}`} className="font-medium text-[#1A1A1A] hover:text-[#C5A059] transition-colors">
+                    +91 {BRAND_DATA.phone}
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-[#1A1A1A]/60 font-semibold">
+                    Website:
+                  </span>
+                  <a href="https://www.samriddhibroom.com" target="_blank" rel="noopener noreferrer" className="font-medium text-[#C5A059] hover:underline">
+                    www.samriddhibroom.com
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -168,7 +180,7 @@ export const LocationSection: React.FC = () => {
             {/* Map Footer Bar */}
             <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#FDFBF7]/95 backdrop-blur-sm p-3 rounded-xl border border-[#C5A05930] text-xs">
               <span className="text-[#1A1A1A]/80 text-center sm:text-left">
-                Dhobi Ghat, Lower Burdwan Compound, Lalpur, Ranchi
+                71, DG Road, Ghulmohar Parks, Lalpur, Ranchi
               </span>
               <a
                 href={directionsUrl}

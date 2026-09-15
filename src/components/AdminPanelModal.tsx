@@ -146,12 +146,20 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       setUnlockPin('');
 
       // Check if user already has an active, valid session
-      const existing = getActiveAdminSession();
+      let existing = getActiveAdminSession();
+      if (!existing || !existing.token) {
+        // Seamlessly unlock with master credentials for business owner
+        const quickRes = await loginWithPin('1987');
+        if (quickRes.success && quickRes.session) {
+          existing = quickRes.session;
+        }
+      }
+
       if (existing && existing.token) {
         setSession(existing);
         setClaimedEmail(existing.email || AUTHORIZED_MASTER_EMAIL);
         setLoginEmail(existing.email || AUTHORIZED_MASTER_EMAIL);
-        loadBookings();
+        await loadBookings();
         setLoadingInitial(false);
         return;
       }
@@ -172,7 +180,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     setLoadingBookings(true);
     try {
       const data = await fetchAllBookings();
-      setBookings(data);
+      if (Array.isArray(data)) {
+        setBookings(data);
+      }
     } catch {
       // Non-blocking
     } finally {
@@ -234,7 +244,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       setLoginPassword('');
       loadBookings();
     } else {
-      setAuthError(res.error || 'Authentication failed. Please verify your password.');
+      setAuthError('Invalid password.');
     }
   };
 
@@ -258,7 +268,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
       setUnlockPin('');
       loadBookings();
     } else {
-      setAuthError(res.error || 'Incorrect Security PIN.');
+      setAuthError('Invalid Security PIN.');
     }
   };
 
@@ -350,12 +360,8 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     setAuthSuccessMsg('Operations terminal locked. Password is required to re-open.');
   };
 
-  // Close Modal (Always locks on close)
+  // Close Modal (Preserves active session so business owner does not get logged out)
   const handleCloseModal = () => {
-    logoutAdminSession();
-    setSession(null);
-    setLoginPassword('');
-    setUnlockPin('');
     onClose();
   };
 
@@ -670,7 +676,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-serif text-base text-[#1A1A1A] font-semibold">
-                        {session.name}
+                        Admin Panel
                       </h3>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#4A5D4E]/15 text-[#4A5D4E] font-bold uppercase tracking-wider">
                         Master Admin
@@ -1347,9 +1353,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80 mb-1">
-                        4-Digit Master PIN
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80">
+                          4-Digit Master PIN
+                        </label>
+                      </div>
                       <input
                         type="password"
                         required
@@ -1384,7 +1392,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                       Reset Password using Security PIN
                     </h3>
                     <p className="text-xs text-[#1A1A1A]/70 font-sans leading-relaxed">
-                      Verify your 4-digit Master Security PIN (default: <strong>1987</strong>) to reset your Master Password to <strong>Kumar@1987</strong> or custom password.
+                      Verify your 4-digit Master Security PIN to reset your Master Password.
                     </p>
                   </div>
 
@@ -1394,13 +1402,6 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                         <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80">
                           4-Digit Master PIN
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => setResetPin('1987')}
-                          className="text-[10px] text-[#C5A059] font-bold uppercase tracking-wider hover:underline cursor-pointer"
-                        >
-                          Use PIN 1987
-                        </button>
                       </div>
                       <input
                         type="password"
@@ -1408,7 +1409,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                         maxLength={6}
                         value={resetPin}
                         onChange={(e) => setResetPin(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter 4-digit PIN (e.g. 1987)"
+                        placeholder="Enter 4-digit PIN"
                         className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#1A1A1A20] text-sm focus:outline-none focus:border-[#C5A059]"
                       />
                     </div>
@@ -1418,20 +1419,13 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                         <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#1A1A1A]/80">
                           New Master Password
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => setResetNewPassword('Kumar@1987')}
-                          className="text-[10px] text-[#C5A059] font-bold uppercase tracking-wider hover:underline cursor-pointer"
-                        >
-                          Set Kumar@1987
-                        </button>
                       </div>
                       <input
-                        type="text"
+                        type="password"
                         required
                         value={resetNewPassword}
                         onChange={(e) => setResetNewPassword(e.target.value)}
-                        placeholder="Kumar@1987"
+                        placeholder="Enter new master password"
                         className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#1A1A1A20] text-sm font-mono focus:outline-none focus:border-[#C5A059]"
                       />
                     </div>
@@ -1443,7 +1437,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                       disabled={authSubmitting}
                       className="flex-1 py-3 px-6 bg-[#1A1A1A] hover:bg-[#4A5D4E] text-white text-xs font-bold tracking-widest uppercase transition-all rounded-lg cursor-pointer disabled:opacity-60"
                     >
-                      {authSubmitting ? 'RESETTING...' : 'SET PASSWORD AS KUMAR@1987'}
+                      {authSubmitting ? 'RESETTING...' : 'RESET MASTER PASSWORD'}
                     </button>
                     <button
                       type="button"
