@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import {
   Sparkles,
   ArrowRight,
-  Info,
   Eye,
 } from 'lucide-react';
 import { BRAND_DATA, PRODUCT_CATEGORIES } from '../data/brandData';
@@ -152,15 +151,6 @@ export const ProductShowcase: React.FC<ProductShowcaseProps> = ({
               </div>
             </motion.div>
           ))}
-        </div>
-
-        {/* Honest Business Placeholder Notice */}
-        <div className="flex items-center justify-center gap-2 p-3 bg-white rounded-xl text-center text-xs text-[#1A1A1A]/70 max-w-2xl mx-auto border border-[#C5A05930] shadow-xs">
-          <Info className="w-4 h-4 text-[#C5A059] shrink-0" />
-          <span>
-            <strong>Note for Retailers & Consumers:</strong> Categories shown represent proposed product
-            segments. Actual specifications and dimensions will be unveiled during the official launch.
-          </span>
         </div>
       </div>
 
