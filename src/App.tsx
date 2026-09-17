@@ -151,10 +151,12 @@ export default function App() {
       />
 
       {/* Admin Operations & Bookings Manager (Only accessible via footer) */}
-      <AdminPanelModal
-        isOpen={adminModalOpen}
-        onClose={() => setAdminModalOpen(false)}
-      />
+      {adminModalOpen && (
+        <AdminPanelModal
+          isOpen={adminModalOpen}
+          onClose={() => setAdminModalOpen(false)}
+        />
+      )}
 
       {/* DPDP Act 2023 Statutory Privacy & Rights Center Modal */}
       <DPDPModal

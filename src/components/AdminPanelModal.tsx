@@ -64,7 +64,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   // Session & Slot status
   const [session, setSession] = useState<AdminSession | null>(null);
   const [claimedEmail, setClaimedEmail] = useState<string>(AUTHORIZED_MASTER_EMAIL);
-  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingInitial, setLoadingInitial] = useState(false);
 
   // Auth Forms State: 'login' (Password), 'unlock_pin' (PIN), 'forgot_pin' (Reset)
   const [authMode, setAuthMode] = useState<'login' | 'unlock_pin' | 'forgot_pin'>('login');
@@ -131,50 +131,50 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   }, [feedbackToast]);
 
   // CRITICAL SECURITY ENFORCEMENT:
-  // Every time the admin portal modal opens, it MUST start strictly locked.
-  // The user MUST provide the Master Password or Master Security PIN to view any bookings.
+  // Every time the admin panel opens or mounts, it is strictly locked with session = null and requires password.
+  // Closing the panel completely closes it and destroys any session credentials.
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+    // Strictly clear any lingering session credentials on mount
+    logoutAdminSession();
+    setSession(null);
+    setLoginPassword('');
+    setUnlockPin('');
+    setAuthMode('login');
+    setAuthError(null);
+    setAuthSuccessMsg(null);
 
     const init = async () => {
-      setLoadingInitial(true);
-      setAuthError(null);
-      setAuthSuccessMsg(null);
-      setLoginPassword('');
-      setUnlockPin('');
-
-      // Check if user already has an active, valid session
-      let existing = getActiveAdminSession();
-      if (!existing || !existing.token) {
-        // Seamlessly unlock with master credentials for business owner
-        const quickRes = await loginWithPin('1987');
-        if (quickRes.success && quickRes.session) {
-          existing = quickRes.session;
+      try {
+        const status = await checkAdminSlotStatus();
+        if (status.adminEmail) {
+          setClaimedEmail(status.adminEmail);
+          setLoginEmail(status.adminEmail);
         }
+      } catch {
+        // Fallback email already initialized
       }
-
-      if (existing && existing.token) {
-        setSession(existing);
-        setClaimedEmail(existing.email || AUTHORIZED_MASTER_EMAIL);
-        setLoginEmail(existing.email || AUTHORIZED_MASTER_EMAIL);
-        await loadBookings();
-        setLoadingInitial(false);
-        return;
-      }
-
-      // Verify master status & load designated master email
-      const status = await checkAdminSlotStatus();
-      setClaimedEmail(status.adminEmail || AUTHORIZED_MASTER_EMAIL);
-      setLoginEmail(status.adminEmail || AUTHORIZED_MASTER_EMAIL);
-      setAuthMode('login');
-
-      setLoadingInitial(false);
     };
 
     init();
-  }, [isOpen]);
+
+    return () => {
+      logoutAdminSession();
+      setSession(null);
+      setLoginPassword('');
+      setUnlockPin('');
+    };
+  }, []);
+
+  // Lock and close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCloseModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const loadBookings = async () => {
     setLoadingBookings(true);
@@ -360,8 +360,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
     setAuthSuccessMsg('Operations terminal locked. Password is required to re-open.');
   };
 
-  // Close Modal (Preserves active session so business owner does not get logged out)
+  // Close Modal: Automatically locks the terminal so credentials are required on reopen
   const handleCloseModal = () => {
+    handleLockTerminal();
     onClose();
   };
 
@@ -588,10 +589,16 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
   return (
     <div
       id="admin-panel-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleCloseModal();
+        }
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#1A1A1A]/85 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
         id="admin-panel-container"
+        onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-6xl max-h-[92vh] flex flex-col bg-[#FDFBF7] text-[#1A1A1A] rounded-2xl shadow-2xl border border-[#C5A05940] overflow-hidden"
       >
         {/* Modal Header */}
@@ -630,12 +637,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
 
                 <button
                   type="button"
-                  onClick={handleLockTerminal}
+                  onClick={handleCloseModal}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/20 text-xs font-sans transition-colors cursor-pointer"
-                  title="Lock Admin Terminal"
+                  title="Lock Admin Terminal & Close"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Lock Portal</span>
+                  <span className="hidden sm:inline">Lock & Close</span>
                 </button>
               </>
             )}
@@ -644,11 +651,12 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
               type="button"
               onClick={handleCloseModal}
               id="admin-modal-close-btn"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[#FDFBF770] hover:text-[#FDFBF7] hover:bg-white/10 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-[#FDFBF7] text-xs font-semibold transition-colors cursor-pointer"
               aria-label="Close and Lock"
-              title="Close & Lock Terminal"
+              title="Close Admin Panel"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
+              <span>Close</span>
             </button>
           </div>
         </div>
@@ -1285,7 +1293,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-1">
                     <h3 className="font-serif text-xl text-[#1A1A1A] font-semibold">
-                      Unlock with Master Password
+                      Admin Panel
                     </h3>
                     <p className="text-xs text-[#1A1A1A]/70 font-sans">
                       Enter the master administrator password for {claimedEmail}.
@@ -1313,6 +1321,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                         <input
                           type={showPassword ? 'text' : 'password'}
                           required
+                          autoFocus
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
                           placeholder="Enter your master password"
@@ -1330,14 +1339,23 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={authSubmitting}
-                    className="w-full py-3.5 px-6 bg-[#1A1A1A] hover:bg-[#4A5D4E] text-white text-xs font-bold tracking-widest uppercase transition-all rounded-lg shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                  >
-                    <KeyRound className="w-4 h-4 text-[#C5A059]" />
-                    <span>{authSubmitting ? 'VERIFYING CREDENTIALS...' : 'UNLOCK OPERATIONS TERMINAL'}</span>
-                  </button>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={authSubmitting}
+                      className="flex-1 py-3.5 px-6 bg-[#1A1A1A] hover:bg-[#4A5D4E] text-white text-xs font-bold tracking-widest uppercase transition-all rounded-lg shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                    >
+                      <KeyRound className="w-4 h-4 text-[#C5A059]" />
+                      <span>{authSubmitting ? 'VERIFYING CREDENTIALS...' : 'UNLOCK ADMIN PANEL'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseModal}
+                      className="py-3.5 px-5 bg-transparent hover:bg-[#1A1A1A08] border border-[#1A1A1A20] text-[#1A1A1A] text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </form>
               ) : authMode === 'unlock_pin' ? (
                 /* ================= 4-DIGIT PIN UNLOCK FORM ================= */
@@ -1361,6 +1379,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                       <input
                         type="password"
                         required
+                        autoFocus
                         maxLength={6}
                         value={unlockPin}
                         onChange={(e) => setUnlockPin(e.target.value.replace(/\D/g, ''))}
@@ -1370,14 +1389,23 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ isOpen, onClos
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={authSubmitting}
-                    className="w-full py-3.5 px-6 bg-[#1A1A1A] hover:bg-[#4A5D4E] text-white text-xs font-bold tracking-widest uppercase transition-all rounded-lg shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                  >
-                    <Shield className="w-4 h-4 text-[#C5A059]" />
-                    <span>{authSubmitting ? 'VERIFYING PIN...' : 'UNLOCK TERMINAL WITH PIN'}</span>
-                  </button>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={authSubmitting}
+                      className="flex-1 py-3.5 px-6 bg-[#1A1A1A] hover:bg-[#4A5D4E] text-white text-xs font-bold tracking-widest uppercase transition-all rounded-lg shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                    >
+                      <Shield className="w-4 h-4 text-[#C5A059]" />
+                      <span>{authSubmitting ? 'VERIFYING PIN...' : 'UNLOCK WITH PIN'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseModal}
+                      className="py-3.5 px-5 bg-transparent hover:bg-[#1A1A1A08] border border-[#1A1A1A20] text-[#1A1A1A] text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </form>
               ) : (
                 /* ================= FORGOT PASSWORD / PIN RESET ================= */
